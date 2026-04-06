@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Media Tools — Background Remover · Video & Image Converter</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<style>
+  :root {
+    --accent: #6366f1;
+    --accent-dark: #4f46e5;
+    --surface: #09090b;
+    --surface2: #18181b;
+    --surface3: #27272a;
+    --border: rgba(255,255,255,0.1);
+    --text: #fafafa;
+    --muted: #a1a1aa;
+    --glow: rgba(99, 102, 241, 0.15);
+  }
+  .light {
+    --accent: #4f46e5;
+    --accent-dark: #4338ca;
+    --surface: #fafafa;
+    --surface2: #ffffff;
+    --surface3: #f4f4f5;
+    --border: rgba(0,0,0,0.1);
+    --text: #09090b;
+    --muted: #71717a;
+    --glow: rgba(79, 70, 229, 0.1);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    transition: background 0.3s, color 0.3s;
+    min-height: 100vh;
+  }
+  h1,h2,h3,h4 { font-family: 'Syne', sans-serif; }
+  .card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute; top:0; left:0; right:0; height:1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .card:hover { 
+    border-color: rgba(255,255,255,0.15); 
+    box-shadow: 0 10px 40px var(--glow);
+    transform: translateY(-2px);
+  }
+  .card:hover::before { opacity: 1; }
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    background: var(--surface3);
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .dropzone.dragover, .dropzone:hover { border-color: var(--accent); background: var(--glow); }
+  .btn-accent {
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff;
+    box-shadow: 0 4px 12px var(--glow);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 0.6rem 1.4rem;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-accent:hover { background: var(--accent-dark); transform: translateY(-1px); }
+  .btn-accent:active { transform: scale(0.97); }
+  .btn-accent:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.55rem 1.2rem;
+    cursor: pointer;
+    font-size: 0.82rem;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-ghost:hover { border-color: var(--accent); background: var(--glow); }
+  .badge {
+    display: inline-flex; align-items: center;
+    background: var(--glow);
+    color: var(--accent);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'Syne', sans-serif;
+    padding: 2px 8px;
+    letter-spacing: 0.04em;
+  }
+  .light .badge { color: var(--accent-dark); background: rgba(79, 70, 229, 0.1); border-color: rgba(79, 70, 229, 0.2); }
+  .progress-track { background: var(--surface3); border-radius: 999px; height: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s ease; }
+  .nav-link {
+    color: var(--muted); font-size: 0.82rem; font-weight: 500;
+    transition: color 0.15s; cursor: pointer; text-decoration: none; white-space: nowrap;
+  }
+  .nav-link:hover, .nav-link.active { color: var(--text); }
+  .toggle {
+    width: 42px; height: 23px; background: var(--surface3);
+    border-radius: 999px; position: relative; cursor: pointer;
+    border: 1px solid var(--border); transition: background 0.2s; flex-shrink: 0;
+  }
+  .toggle.on { background: var(--accent); border-color: var(--accent); }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 17px; height: 17px; background: #fff;
+    border-radius: 50%; transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(19px); }
+  .preview-split { display: flex; gap: 12px; }
+  .preview-split > div { flex: 1; min-width: 0; }
+  .preview-img {
+    width: 100%; border-radius: 10px; object-fit: contain; max-height: 260px;
+    background: repeating-conic-gradient(#88888820 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
+  }
+  .img-wrap { position: relative; overflow: hidden; border-radius: 10px; }
+  .img-overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .img-wrap:hover .img-overlay { opacity: 1; }
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    padding: 0.75rem 1.1rem; border-radius: 10px; font-size: 0.83rem;
+    font-weight: 500; z-index: 1000; transform: translateY(80px);
+    transition: transform 0.3s; max-width: 300px;
+  }
+  .toast.show { transform: translateY(0); }
+  .toast.error { background: #3a1515; color: #f99; border: 1px solid #6a2020; }
+  .toast.success { background: #1a2e10; color: #afa; border: 1px solid #2d5020; }
+  .light .toast.error { background: #fde8e8; color: #c00; border-color: #f5b0b0; }
+  .light .toast.success { background: #e8f5e0; color: #2a6a00; border-color: #a0d080; }
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.75s linear infinite; display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .section-dot {
+    width: 6px; height: 6px; background: var(--accent);
+    border-radius: 50%; display: inline-block; flex-shrink: 0;
+  }
+  select {
+    background: var(--surface3); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.5rem 0.85rem; font-size: 0.83rem; outline: none;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+  }
+  select:focus { border-color: var(--accent); }
+  input[type="password"], input[type="text"] {
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.5rem 0.85rem; font-size: 0.83rem;
+    font-family: 'DM Sans', sans-serif; outline: none;
+  }
+  input[type="password"]:focus, input[type="text"]:focus { border-color: var(--accent); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  @media (max-width: 600px) { .preview-split { flex-direction: column; } }
+  .vp-progress { height: 6px; background: var(--surface3); border-radius: 4px; overflow: hidden; margin-top: 1rem; display: none; }
+  .vp-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.3s; }
+
+  /* Thumbnail Generator */
+  .th-wrap { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .th-canvas-wrap { flex: 1; min-width: 300px; position: relative; }
+  .th-canvas-wrap canvas { width: 100%; border-radius: 8px; border: 1px solid var(--border); cursor: crosshair; display: block; background: #000; }
+  .th-panel { width: 280px; display: flex; flex-direction: column; gap: 0.75rem; flex-shrink: 0; }
+  .th-group { background: var(--surface3); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem; }
+  .th-group h4 { margin: 0 0 0.5rem; font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .th-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+  .th-row label { font-size: 0.78rem; color: var(--text); min-width: 55px; }
+  .th-row input[type=range] { flex: 1; min-width: 60px; accent-color: var(--accent); }
+  .th-row input[type=color] { width: 28px; height: 28px; border: none; background: none; cursor: pointer; padding: 0; }
+  .th-row input[type=text], .th-row textarea { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: 6px; font-size: 0.8rem; outline: none; font-family: inherit; }
+  .th-row textarea { resize: vertical; min-height: 40px; }
+  .th-row select { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 6px; font-size: 0.78rem; outline: none; }
+  .th-btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface3); color: var(--text); cursor: pointer; font-size: 0.78rem; transition: 0.15s; }
+  .th-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .th-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .th-emoji-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+  .th-emoji-grid button { width: 32px; height: 32px; font-size: 1.1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; transition: 0.15s; }
+  .th-emoji-grid button:hover { background: var(--accent); transform: scale(1.15); }
+  @media (max-width: 700px) { .th-panel { width: 100%; } }
+</style>
+</head>
+<body id="app">
+
+<!-- HEADER -->
+<header style="position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);">
+  <div style="max-width:1100px;margin:0 auto;padding:0 1.5rem;height:58px;display:flex;align-items:center;gap:2rem;">
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <div style="width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <rect x="2" y="2" width="5" height="5" rx="1" fill="#111"/>
+          <rect x="9" y="2" width="5" height="5" rx="1" fill="#111" opacity=".7"/>
+          <rect x="2" y="9" width="5" height="5" rx="1" fill="#111" opacity=".5"/>
+          <rect x="9" y="9" width="5" height="5" rx="1" fill="#111" opacity=".3"/>
+        </svg>
+      </div>
+      <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;letter-spacing:-0.02em;">Media<span style="color:var(--accent);">Tools</span></span>
+    </div>
+    <nav style="display:flex;gap:1.5rem;flex:1;overflow-x:auto;">
+      <a class="nav-link active" href="#bg-remover" onclick="smoothScroll('bg-remover');return false;">Background Remover</a>
+      <a class="nav-link" href="#video-conv" onclick="smoothScroll('video-conv');return false;">Video Converter</a>
+      <a class="nav-link" href="#img-conv" onclick="smoothScroll('img-conv');return false;">Image Converter</a>
+      <a class="nav-link" href="#ai-video" onclick="smoothScroll('ai-video');return false;">AI Video Editor</a>
+      <a class="nav-link" href="#auphonic" onclick="smoothScroll('auphonic');return false;">Auphonic Audio</a>
+      <a class="nav-link" href="#thumb-gen" onclick="smoothScroll('thumb-gen');return false;">Thumbnail Gen</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <div class="toggle" id="themeToggle" onclick="toggleTheme()"></div>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section style="max-width:1100px;margin:0 auto;padding:4rem 1.5rem 2rem;">
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+    <span class="badge">All-in-one · Free</span>
+    <span style="color:var(--muted);font-size:0.8rem;">No sign-up required. Conversion runs in your browser.</span>
+  </div>
+  <div style="position:absolute;top:-10%;left:50%;width:800px;height:400px;background:var(--accent);filter:blur(150px);opacity:0.15;border-radius:50%;transform:translate(-50%,0);z-index:-1;pointer-events:none;"></div>
+  <h1 style="font-size:clamp(2.5rem,6vw,4.5rem);font-weight:800;line-height:1.05;letter-spacing:-0.04em;margin:0.75rem 0 0.5rem;position:relative;">
+    Edit media.<br/><span style="background:linear-gradient(to right, var(--accent), #a855f7);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Instantly.</span>
+  </h1>
+  <p style="color:var(--muted);font-size:1rem;max-width:480px;line-height:1.7;margin:0;">
+    Remove backgrounds, convert videos and images — right in your browser. Video and image conversion never leaves your device.
+  </p>
+</section>
+
+<main style="max-width:1100px;margin:0 auto;padding:0 1.5rem 6rem;display:flex;flex-direction:column;gap:2.5rem;">
+
+  <!-- ═══ TOOL 1: BACKGROUND REMOVER ═══ -->
+  <section id="bg-remover" class="card" style="padding:2rem;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap;">
+      <div class="section-dot"></div>
+      <h2 style="font-size:1.25rem;font-weight:700;margin:0;">Background Remover</h2>
+      <span class="badge" style="margin-left:auto;">Requires remove.bg API key</span>
+    </div>
+
+    <!-- API Key -->
+    <div id="bgApiPrompt" style="margin-bottom:1.5rem;padding:1rem;background:var(--surface3);border-radius:10px;border:1px dashed var(--border);">
+      <p style="font-size:0.82rem;color:var(--muted);margin:0 0 0.6rem;">
+        Uses the <strong style="color:var(--text);">remove.bg API</strong> — free tier: 50 previews/month.
+        Get your key at <a href="https://www.remove.bg/api" target="_blank" style="color:var(--accent);">remove.bg/api</a>.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input id="bgApiKey" type="password" placeholder="Paste your remove.bg API key…" style="flex:1;min-width:200px;" />
+        <button class="btn-accent" onclick="saveBgKey()">Save Key</button>
+      </div>
+      <p id="bgKeyStatus" style="font-size:0.75rem;margin:6px 0 0;color:var(--muted);"></p>
+    </div>
+
+    <!-- Drop zone -->
+    <div class="dropzone" id="bgDropzone" style="padding:2.5rem 1rem;text-align:center;margin-bottom:1.5rem;"
+      onclick="document.getElementById('bgFileInput').click()"
+      ondragover="handleDragOver(event,'bgDropzone')"
+      ondragleave="handleDragLeave('bgDropzone')"
+      ondrop="handleDrop(event,handleBgFile)">
+      <input id="bgFileInput" type="file" accept="image/jpeg,image/png,image/jpg" hidden onchange="handleBgFile(this.files[0])" />
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="margin:0 auto 10px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <p style="font-size:0.85rem;color:var(--muted);margin:0;">Drag & drop or <span style="color:var(--text);font-weight:500;">click to upload</span></p>
+      <p style="font-size:0.73rem;color:var(--muted);margin:4px 0 0;">JPG, PNG · max 12 MB</p>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap;">
+      <button class="btn-accent" id="bgProcessBtn" onclick="removeBg()" disabled>Remove Background</button>
+      <span id="bgStatus" style="font-size:0.8rem;color:var(--muted);display:flex;align-items:center;gap:8px;"></span>
+    </div>
+
+    <div id="bgPreview" style="display:none;">
+      <div class="preview-split">
+        <div>
+          <p style="font-size:0.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Original</p>
+          <img id="bgOrigImg" class="preview-img" alt="original" />
+        </div>
+        <div>
+          <p style="font-size:0.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Background Removed</p>
+          <div class="img-wrap">
+            <img id="bgResultImg" class="preview-img" alt="result" />
+            <div class="img-overlay">
+              <button class="btn-accent" onclick="dlBgResult()">↓ Download PNG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:1rem;flex-wrap:wrap;">
+        <button class="btn-accent" onclick="dlBgResult()">↓ Download PNG</button>
+        <button class="btn-ghost" onclick="resetBg()">Try another image</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TOOL 2: VIDEO CONVERTER ═══ -->
+  <section id="video-conv" class="card" style="padding:2rem;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.5rem;flex-wrap:wrap;">
+      <div class="section-dot"></div>
+      <h2 style="font-size:1.25rem;font-weight:700;margin:0;">Video Converter</h2>
+      <span class="badge" style="margin-left:auto;">Client-side · FFmpeg.js</span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin:0 0 1.5rem;">Convert between MP4, MOV, and WEBM entirely in your browser. Nothing is uploaded to any server.</p>
+
+    <div class="dropzone" id="vidDropzone" style="padding:2.5rem 1rem;text-align:center;margin-bottom:1.5rem;"
+      onclick="document.getElementById('vidFileInput').click()"
+      ondragover="handleDragOver(event,'vidDropzone')"
+      ondragleave="handleDragLeave('vidDropzone')"
+      ondrop="handleDrop(event,handleVidFile)">
+      <input id="vidFileInput" type="file" accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,.mp4,.mov,.avi,.webm" hidden onchange="handleVidFile(this.files[0])" />
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="margin:0 auto 10px;display:block;"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      <p style="font-size:0.85rem;color:var(--muted);margin:0;">Drag & drop or <span style="color:var(--text);font-weight:500;">click to upload</span></p>
+      <p style="font-size:0.73rem;color:var(--muted);margin:4px 0 0;">MP4, MOV, AVI, WEBM · max 500 MB</p>
+    </div>
+
+    <div id="vidInfo" style="display:none;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;gap:10px;padding:0.75rem 1rem;background:var(--surface3);border-radius:10px;margin-bottom:1rem;flex-wrap:wrap;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        <span id="vidFileName" style="font-size:0.83rem;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <span id="vidFileSize" style="font-size:0.75rem;color:var(--muted);flex-shrink:0;"></span>
+        <button class="btn-ghost" onclick="resetVid()" style="padding:0.3rem 0.7rem;font-size:0.75rem;">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:0.83rem;color:var(--muted);">Convert to:</span>
+        <select id="vidFormat">
+          <option value="mp4">MP4 (H.264)</option>
+          <option value="mov">MOV (QuickTime)</option>
+          <option value="webm">WEBM (VP9)</option>
+        </select>
+        <button class="btn-accent" id="vidConvertBtn" onclick="convertVideo()">Convert Video</button>
+      </div>
+    </div>
+
+    <div id="vidProgress" style="display:none;margin-bottom:1.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span id="vidProgressLabel" style="font-size:0.8rem;color:var(--muted);">Initializing FFmpeg…</span>
+        <span id="vidProgressPct" style="font-size:0.8rem;font-weight:600;color:var(--accent);">0%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="vidProgressFill" style="width:0%;"></div></div>
+      <p style="font-size:0.72rem;color:var(--muted);margin:6px 0 0;">Runs in your browser — large files may take a few minutes.</p>
+    </div>
+
+    <div id="vidResult" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;padding:0.85rem 1rem;background:rgba(232,255,60,0.05);border:1px solid rgba(232,255,60,0.2);border-radius:10px;flex-wrap:wrap;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="vidResultLabel" style="font-size:0.83rem;flex:1;">Conversion complete!</span>
+        <button class="btn-accent" id="vidDownloadBtn">↓ Download</button>
+        <button class="btn-ghost" onclick="resetVid()">Convert another</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TOOL 3: IMAGE CONVERTER ═══ -->
+  <section id="img-conv" class="card" style="padding:2rem;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.5rem;flex-wrap:wrap;">
+      <div class="section-dot"></div>
+      <h2 style="font-size:1.25rem;font-weight:700;margin:0;">Image Converter</h2>
+      <span class="badge" style="margin-left:auto;">Client-side · Canvas API</span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin:0 0 1.5rem;">Convert between JPG, PNG, and WEBP instantly. Runs 100% in your browser using the Canvas API.</p>
+
+    <div class="dropzone" id="imgDropzone" style="padding:2.5rem 1rem;text-align:center;margin-bottom:1.5rem;"
+      onclick="document.getElementById('imgFileInput').click()"
+      ondragover="handleDragOver(event,'imgDropzone')"
+      ondragleave="handleDragLeave('imgDropzone')"
+      ondrop="handleDrop(event,handleImgFile)">
+      <input id="imgFileInput" type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="handleImgFile(this.files[0])" />
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="margin:0 auto 10px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <p style="font-size:0.85rem;color:var(--muted);margin:0;">Drag & drop or <span style="color:var(--text);font-weight:500;">click to upload</span></p>
+      <p style="font-size:0.73rem;color:var(--muted);margin:4px 0 0;">JPG, PNG, WEBP · max 20 MB</p>
+    </div>
+
+    <div id="imgOptions" style="display:none;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;gap:10px;padding:0.75rem 1rem;background:var(--surface3);border-radius:10px;margin-bottom:1rem;flex-wrap:wrap;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span id="imgFileName" style="font-size:0.83rem;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <span id="imgFileSize" style="font-size:0.75rem;color:var(--muted);flex-shrink:0;"></span>
+        <button class="btn-ghost" onclick="resetImg()" style="padding:0.3rem 0.7rem;font-size:0.75rem;">✕</button>
+      </div>
+      <div style="margin-bottom:1rem;">
+        <img id="imgPreviewEl" class="preview-img" style="max-height:180px;max-width:320px;" alt="preview" />
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:0.83rem;color:var(--muted);">Convert to:</span>
+        <select id="imgFormat">
+          <option value="image/jpeg">JPG</option>
+          <option value="image/png">PNG</option>
+          <option value="image/webp">WEBP</option>
+        </select>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:0.83rem;color:var(--muted);">Quality:</span>
+          <input type="range" id="imgQuality" min="10" max="100" value="92" style="width:100px;" />
+          <span id="imgQualityVal" style="font-size:0.8rem;color:var(--text);min-width:30px;">92%</span>
+        </div>
+        <button class="btn-accent" onclick="convertImage()">Convert Image</button>
+      </div>
+    </div>
+
+    <div id="imgResult" style="display:none;">
+      <div class="preview-split">
+        <div>
+          <p style="font-size:0.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Original</p>
+          <img id="imgOrigResult" class="preview-img" alt="original" />
+        </div>
+        <div>
+          <p style="font-size:0.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 6px;">Converted</p>
+          <div class="img-wrap">
+            <img id="imgConvResult" class="preview-img" alt="converted" />
+            <div class="img-overlay"><button class="btn-accent" id="imgDlHover">↓ Download</button></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:1rem;flex-wrap:wrap;align-items:center;">
+        <button class="btn-accent" id="imgDownloadBtn">↓ Download</button>
+        <span id="imgResultSize" style="font-size:0.78rem;color:var(--muted);"></span>
+        <button class="btn-ghost" style="margin-left:auto;" onclick="resetImg()">Convert another</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TOOL 4: AI VIDEO EDITOR ═══ -->
+  <section id="ai-video" class="card" style="padding:2rem;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.5rem;flex-wrap:wrap;">
+      <div class="section-dot"></div>
+      <h2 style="font-size:1.25rem;font-weight:700;margin:0;">AI Video Editor</h2>
+      <span class="badge" style="margin-left:auto;">Server-side · AI Face Tracking</span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin:0 0 1.5rem;">Enhance audio with noise reduction, and auto-crop vertically for Social Media.</p>
+
+    <div class="dropzone" id="vDropzone" style="padding:2.5rem 1rem;text-align:center;margin-bottom:1.5rem;" onclick="document.getElementById('vp-file').click()">
+      <input type="file" id="vp-file" accept="video/mp4,video/quicktime" hidden />
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="margin:0 auto 10px;display:block;"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      <div id="vp-filename">Drag & drop video or <span style="color:var(--text);font-weight:500;">click to upload</span></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <div style="background: var(--surface3); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+         <h3 style="margin:0 0 0.5rem;font-size:0.9rem;color:var(--muted);">🎙️ Audio Enhancer</h3>
+         <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+           <input type="checkbox" id="vp-audio" checked style="accent-color: var(--accent);" /> AI Noise Reduction & Voice Boost
+         </label>
+      </div>
+
+      <div style="background: var(--surface3); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+         <h3 style="margin:0 0 0.5rem;font-size:0.9rem;color:var(--muted);">📱 Social Media Formatter</h3>
+         <select id="vp-format" style="width: 100%;">
+           <option value="original">Original Format</option>
+           <option value="9:16">9:16 (TikTok / Reels) - Auto AI Face Track</option>
+           <option value="1:1">1:1 (Instagram Square) - Auto AI Face Track</option>
+         </select>
+      </div>
+    </div>
+
+    <button class="btn-accent" id="vp-process" disabled style="width: 100%; justify-content: center; margin-top: 1.5rem;">Process Video Server-Side</button>
+
+    <div class="vp-progress" id="vp-prog-bar">
+      <div class="vp-fill" id="vp-fill"></div>
+    </div>
+    <div id="vp-status" style="margin-top:0.5rem;font-size:0.8rem;color:var(--muted);text-align:center;"></div>
+    
+    <div id="vp-result" style="margin-top: 1rem; display: none;">
+       <a id="vp-dl" href="#" download class="btn-accent" style="width:100%;justify-content:center;background:#22c55e;color:#fff;border-color:#22c55e;">↓ Download Processed Video</a>
+    </div>
+    
+    <video id="vp-vid-hidden" style="display:none;" muted playsinline></video>
+  </section>
+
+  <!-- ═══ TOOL 5: AUPHONIC ENHANCER ═══ -->
+  <section id="auphonic" class="card" style="padding:2rem;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.5rem;flex-wrap:wrap;">
+      <div class="section-dot" style="background:#0fdb61;"></div>
+      <h2 style="font-size:1.25rem;font-weight:700;margin:0;">Auphonic Audio Enhancer</h2>
+      <span class="badge" style="margin-left:auto;color:#0fdb61;border-color:rgba(15,219,97,0.2);background:rgba(15,219,97,0.1);">Auphonic API Connected</span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin:0 0 1.5rem;">Professionally master your audio natively using the Auphonic processing engine.</p>
+
+    <div class="dropzone" id="auDrop" style="padding:2.5rem 1rem;text-align:center;margin-bottom:1.5rem;" onclick="document.getElementById('au-file').click()">
+      <input type="file" id="au-file" accept="audio/*,video/mp4" hidden />
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="margin:0 auto 10px;display:block;"><path d="M12 2v20M17 5v14M7 8v8M22 10v4M2 11v2"/></svg>
+      <div id="au-filename">Drag & drop audio/video or <span style="color:var(--text);font-weight:500;">click to upload</span></div>
+    </div>
+
+    <button class="btn-accent" id="au-process" disabled style="width: 100%; justify-content: center; margin-top: 0.5rem; background: linear-gradient(135deg, #0fdb61, #08a345);">Start Auphonic Processing</button>
+
+    <div class="vp-progress" id="au-prog-bar">
+      <div class="vp-fill" id="au-fill" style="background:#0fdb61;"></div>
+    </div>
+    <div id="au-status" style="margin-top:0.5rem;font-size:0.8rem;color:var(--muted);text-align:center;"></div>
+    
+    <div id="au-result" style="margin-top: 1rem; display: none;">
+       <a id="au-dl" href="#" download class="btn-accent" style="width:100%;justify-content:center;background:#22c55e;color:#fff;border-color:#22c55e;">↓ Download Mastered File</a>
+    </div>
+  </section>
+
+  <!-- ═══ TOOL 6: THUMBNAIL GENERATOR ═══ -->
+  <section id="thumb-gen" class="card" style="padding:2rem;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.5rem;flex-wrap:wrap;">
+      <div class="section-dot" style="background:#f59e0b;"></div>
+      <h2 style="font-size:1.25rem;font-weight:700;margin:0;">Thumbnail Generator</h2>
+      <span class="badge" style="margin-left:auto;color:#f59e0b;border-color:rgba(245,158,11,0.2);background:rgba(245,158,11,0.1);">AI-Powered · Canvas Editor</span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin:0 0 1.5rem;">Create eye-catching thumbnails with AI text, face zoom, effects & more.</p>
+
+    <!-- Upload Area -->
+    <div id="thUploadArea">
+      <div class="dropzone" style="padding:2.5rem 1rem;text-align:center;margin-bottom:1rem;cursor:pointer;" onclick="document.getElementById('th-file').click()">
+        <input type="file" id="th-file" accept="image/*,video/mp4" hidden />
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="margin:0 auto 10px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <div id="th-filename">Drop image or video, or <span style="color:var(--text);font-weight:500;">click to upload</span></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+        <span style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">or generate with AI</span>
+        <div style="flex:1;height:1px;background:var(--border);"></div>
+      </div>
+
+      <div class="th-group" style="border-color:rgba(168,85,247,0.3);background:rgba(168,85,247,0.05);">
+        <h4 style="color:#a855f7;">🎨 AI Image Generator</h4>
+        <p style="font-size:0.75rem;color:var(--muted);margin:0 0 8px;">Describe the thumbnail you want and AI will create it for you.</p>
+        <div class="th-row"><textarea id="thImgPrompt" placeholder="e.g. A shocked face man looking at a laptop with money flying everywhere, dramatic lighting, YouTube thumbnail style" rows="3"></textarea></div>
+        <div class="th-row">
+          <label>Style</label>
+          <select id="thImgStyle">
+            <option value="cinematic YouTube thumbnail, dramatic lighting, vibrant colors">YouTube Cinematic</option>
+            <option value="bright colorful pop art style">Pop Art</option>
+            <option value="dark moody dramatic">Dark & Moody</option>
+            <option value="clean minimalist professional">Minimalist</option>
+            <option value="anime manga style illustration">Anime Style</option>
+            <option value="3D rendered, Pixar style">3D Cartoon</option>
+            <option value="photorealistic, ultra detailed">Photorealistic</option>
+          </select>
+        </div>
+        <button class="btn-accent" id="thGenImgBtn" style="width:100%;justify-content:center;font-size:0.82rem;padding:8px;background:linear-gradient(135deg,#a855f7,#7c3aed);" onclick="thGenerateImage()">🖼️ Generate Thumbnail Image</button>
+        <div id="thGenImgStatus" style="margin-top:6px;font-size:0.75rem;color:var(--muted);text-align:center;"></div>
+      </div>
+    </div>
+
+    <!-- Editor (hidden until image loaded) -->
+    <div id="thEditor" style="display:none;">
+      <!-- Aspect Ratio Toggle -->
+      <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:center;">
+        <span style="font-size:0.78rem;color:var(--muted);">Aspect:</span>
+        <button class="th-btn active" id="thAR169" onclick="thSetAR(16,9)">16:9 YouTube</button>
+        <button class="th-btn" id="thAR11" onclick="thSetAR(1,1)">1:1 Instagram</button>
+        <button class="th-btn" style="margin-left:auto;" onclick="thResetEditor()">✕ New</button>
+      </div>
+
+      <div class="th-wrap">
+        <!-- Canvas -->
+        <div class="th-canvas-wrap">
+          <canvas id="thCanvas" width="1280" height="720"></canvas>
+        </div>
+
+        <!-- Controls Panel -->
+        <div class="th-panel">
+          <!-- AI Title -->
+          <div class="th-group" style="border-color:rgba(245,158,11,0.3);">
+            <h4>🤖 AI Title Generator</h4>
+            <div class="th-row"><textarea id="thAiPrompt" placeholder="Describe your video topic..." rows="2"></textarea></div>
+            <button class="btn-accent" style="width:100%;justify-content:center;font-size:0.78rem;padding:6px;background:linear-gradient(135deg,#f59e0b,#d97706);" onclick="thGenerateAI()">✨ Generate Clickbait Title</button>
+            <div id="thAiResult" style="margin-top:6px;font-size:0.75rem;color:var(--muted);"></div>
+          </div>
+
+          <!-- Text -->
+          <div class="th-group">
+            <h4>✏️ Text Overlay</h4>
+            <div class="th-row"><input type="text" id="thText" placeholder="Your title here..." oninput="thRender()" /></div>
+            <div class="th-row">
+              <label>Size</label><input type="range" id="thFontSize" min="20" max="120" value="56" oninput="thRender()" /><span id="thFontSizeVal" style="font-size:0.7rem;color:var(--muted);min-width:25px;">56</span>
+            </div>
+            <div class="th-row">
+              <label>Color</label><input type="color" id="thTextColor" value="#ffffff" oninput="thRender()" />
+              <label>Stroke</label><input type="color" id="thStrokeColor" value="#000000" oninput="thRender()" />
+            </div>
+            <div class="th-row">
+              <label>Stroke W</label><input type="range" id="thStrokeW" min="0" max="16" value="6" oninput="thRender()" />
+            </div>
+            <div class="th-row">
+              <label>Shadow</label>
+              <input type="checkbox" id="thShadow" checked onchange="thRender()" style="accent-color:var(--accent);" />
+              <label>Position</label>
+              <select id="thTextPos" onchange="thSetTextPos();thRender()">
+                <option value="custom">Drag to Position</option>
+                <option value="top">Top</option>
+                <option value="center">Center</option>
+                <option value="bottom" selected>Bottom</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Elements -->
+          <div class="th-group">
+            <h4>🎯 Elements & Emojis</h4>
+            <div class="th-emoji-grid">
+              <button onclick="thAddEmoji('🔥')">🔥</button>
+              <button onclick="thAddEmoji('😱')">😱</button>
+              <button onclick="thAddEmoji('💀')">💀</button>
+              <button onclick="thAddEmoji('🤯')">🤯</button>
+              <button onclick="thAddEmoji('⚡')">⚡</button>
+              <button onclick="thAddEmoji('❤️')">❤️</button>
+              <button onclick="thAddEmoji('👀')">👀</button>
+              <button onclick="thAddEmoji('🚀')">🚀</button>
+              <button onclick="thAddEmoji('💰')">💰</button>
+              <button onclick="thAddEmoji('⬆️')">⬆️</button>
+              <button onclick="thAddEmoji('⭐')">⭐</button>
+              <button onclick="thAddEmoji('🎯')">🎯</button>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+              <button class="th-btn" onclick="thAddShape('arrow')" style="flex:1;">↗ Arrow</button>
+              <button class="th-btn" onclick="thAddShape('circle')" style="flex:1;">⭕ Circle</button>
+            </div>
+            <div style="margin-top:6px;"><button class="th-btn" onclick="thClearOverlays()" style="width:100%;color:#ef4444;">🗑 Clear All Overlays</button></div>
+          </div>
+
+          <!-- Effects -->
+          <div class="th-group">
+            <h4>🎨 Image Effects</h4>
+            <div class="th-row"><label>Bright</label><input type="range" id="thBright" min="50" max="200" value="100" oninput="thRender()" /></div>
+            <div class="th-row"><label>Contrast</label><input type="range" id="thContrast" min="50" max="200" value="100" oninput="thRender()" /></div>
+            <div class="th-row"><label>Saturate</label><input type="range" id="thSaturate" min="0" max="300" value="100" oninput="thRender()" /></div>
+            <div class="th-row"><label>Darken</label><input type="range" id="thDarken" min="0" max="80" value="0" oninput="thRender()" /></div>
+            <div style="display:flex;gap:6px;margin-top:4px;">
+              <button class="th-btn" onclick="thAutoContrast()" style="flex:1;">⚡ Auto Boost</button>
+              <button class="th-btn" onclick="thFaceZoom()" style="flex:1;">🔍 Face Zoom</button>
+            </div>
+          </div>
+
+          <!-- Export -->
+          <div class="th-group" style="border-color:rgba(34,197,94,0.3);">
+            <h4>📥 Export</h4>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-accent" style="flex:1;justify-content:center;font-size:0.78rem;padding:8px;background:#22c55e;border-color:#22c55e;" onclick="thExport('png')">Download PNG</button>
+              <button class="btn-accent" style="flex:1;justify-content:center;font-size:0.78rem;padding:8px;" onclick="thExport('jpg')">Download JPG</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer style="border-top:1px solid var(--border);padding:1.5rem;text-align:center;">
+  <p style="font-size:0.75rem;color:var(--muted);margin:0;">
+    MediaTools · Background removal via <a href="https://www.remove.bg" target="_blank" style="color:var(--accent);">remove.bg API</a> ·
+    Video &amp; image conversion runs entirely client-side · No data is stored
+  </p>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── THEME ── */
+let isLight = false;
+function toggleTheme() {
+  isLight = !isLight;
+  document.getElementById('app').classList.toggle('light', isLight);
+  document.getElementById('themeToggle').classList.toggle('on', isLight);
+}
+
+/* ── TOAST ── */
+let toastTimer;
+function showToast(msg, type = 'error') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 4500);
+}
+
+/* ── NAV SMOOTH SCROLL ── */
+function smoothScroll(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.addEventListener('scroll', () => {
+  const ids = ['bg-remover','video-conv','img-conv','ai-video','auphonic','thumb-gen'];
+  const links = document.querySelectorAll('.nav-link');
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.top <= 80 && r.bottom >= 80) {
+      links.forEach(l => l.classList.remove('active'));
+      links[i] && links[i].classList.add('active');
+    }
+  });
+});
+
+/* ── DRAG & DROP ── */
+function handleDragOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('dragover'); }
+function handleDragLeave(id) { document.getElementById(id).classList.remove('dragover'); }
+function handleDrop(e, cb) { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) cb(f); }
+
+/* ── UTILS ── */
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(2) + ' MB';
+}
+function dlBlob(url, name) { const a = document.createElement('a'); a.href=url; a.download=name; a.click(); }
+
+/* ══════════════════════
+   TOOL 1 — BG REMOVER
+══════════════════════ */
+let bgResultBlob = null;
+let bgSourceFile = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Automatically validate API key
+  const prompt = document.getElementById('bgApiPrompt');
+  if (prompt) prompt.style.display = 'none';
+  const badge = document.querySelector('#bg-remover .badge');
+  if (badge) badge.textContent = 'AI System Ready';
+
+  const q = document.getElementById('imgQuality');
+  const qv = document.getElementById('imgQualityVal');
+  if (q && qv) {
+    q.addEventListener('input', () => qv.textContent = q.value + '%');
+  }
+});
+
+function saveBgKey() {
+  if (bgSourceFile) document.getElementById('bgProcessBtn').disabled = false;
+}
+
+function handleBgFile(file) {
+  if (!file) return;
+  if (!['image/jpeg','image/png','image/jpg'].includes(file.type)) { showToast('Please upload a JPG or PNG image.'); return; }
+  if (file.size > 12 * 1024 * 1024) { showToast('File too large. Max 12 MB.'); return; }
+  bgSourceFile = file;
+  const dz = document.getElementById('bgDropzone');
+  dz.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <span style="font-size:0.85rem;font-weight:500;">${file.name}</span>
+      <span style="font-size:0.75rem;color:var(--muted);">${fmtSize(file.size)}</span>
+      <button class="btn-ghost" onclick="resetBg()" style="padding:0.3rem 0.7rem;font-size:0.75rem;">✕</button>
+    </div>`;
+  if (bgSourceFile) document.getElementById('bgProcessBtn').disabled = false;
+  const rd = new FileReader();
+  rd.onload = e => { document.getElementById('bgOrigImg').src = e.target.result; };
+  rd.readAsDataURL(file);
+}
+
+async function removeBg() {
+  if (!bgSourceFile) { showToast('Upload an image first.'); return; }
+  if (!bgApiKey) { showToast('Enter your remove.bg API key first.'); return; }
+  const btn = document.getElementById('bgProcessBtn');
+  const st = document.getElementById('bgStatus');
+  btn.disabled = true;
+  st.innerHTML = '<span class="spinner"></span>&nbsp;Contacting remove.bg…';
+  document.getElementById('bgPreview').style.display = 'none';
+  try {
+    const fd = new FormData();
+    fd.append('image_file', bgSourceFile);
+    const res = await fetch('/api/remove-bg', {
+      method: 'POST',
+      body: fd
+    });
+    if (!res.ok) {
+      const ej = await res.json().catch(() => ({}));
+      throw new Error(ej?.errors?.[0]?.title || 'API error ' + res.status);
+    }
+    bgResultBlob = await res.blob();
+    const url = URL.createObjectURL(bgResultBlob);
+    document.getElementById('bgResultImg').src = url;
+    document.getElementById('bgPreview').style.display = 'block';
+    st.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>&nbsp;Done!';
+    showToast('Background removed!', 'success');
+  } catch(err) {
+    st.innerHTML = '';
+    showToast('Error: ' + err.message);
+  } finally { btn.disabled = false; }
+}
+
+function dlBgResult() {
+  if (!bgResultBlob) return;
+  dlBlob(URL.createObjectURL(bgResultBlob), 'bg-removed.png');
+}
+
+function resetBg() {
+  bgSourceFile = null; bgResultBlob = null;
+  document.getElementById('bgPreview').style.display = 'none';
+  document.getElementById('bgStatus').innerHTML = '';
+  document.getElementById('bgProcessBtn').disabled = true;
+  const dz = document.getElementById('bgDropzone');
+  dz.innerHTML = `
+    <input id="bgFileInput" type="file" accept="image/jpeg,image/png,image/jpg" hidden onchange="handleBgFile(this.files[0])" />
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="margin:0 auto 10px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    <p style="font-size:0.85rem;color:var(--muted);margin:0;">Drag & drop or <span style="color:var(--text);font-weight:500;">click to upload</span></p>
+    <p style="font-size:0.73rem;color:var(--muted);margin:4px 0 0;">JPG, PNG · max 12 MB</p>`;
+  dz.onclick = () => document.getElementById('bgFileInput').click();
+}
+
+/* ══════════════════════
+   TOOL 2 — VIDEO CONVERTER
+══════════════════════ */
+let vidFile = null, ffmpegLoaded = false, ffmpegInst = null;
+
+async function getFFmpeg() {
+  if (!ffmpegLoaded) {
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    ffmpegInst = createFFmpeg({
+      log: false,
+      progress: ({ ratio }) => {
+        const pct = Math.min(Math.round(ratio * 100), 100);
+        document.getElementById('vidProgressFill').style.width = pct + '%';
+        document.getElementById('vidProgressPct').textContent = pct + '%';
+        if (pct > 0) document.getElementById('vidProgressLabel').textContent = 'Converting…';
+      }
+    });
+    document.getElementById('vidProgressLabel').textContent = 'Loading FFmpeg engine (~30 MB first run)…';
+    await ffmpegInst.load();
+    ffmpegLoaded = true;
+    window._fetchFile = fetchFile;
+  }
+  return ffmpegInst;
+}
+
+function handleVidFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['mp4','mov','avi','webm'].includes(ext)) { showToast('Unsupported format. Use MP4, MOV, AVI, or WEBM.'); return; }
+  if (file.size > 500 * 1024 * 1024) { showToast('File too large. Max 500 MB.'); return; }
+  vidFile = file;
+  document.getElementById('vidFileName').textContent = file.name;
+  document.getElementById('vidFileSize').textContent = fmtSize(file.size);
+  document.getElementById('vidInfo').style.display = 'block';
+  document.getElementById('vidResult').style.display = 'none';
+  document.getElementById('vidProgress').style.display = 'none';
+  const sel = document.getElementById('vidFormat');
+  Array.from(sel.options).forEach(o => o.disabled = (o.value === ext));
+  if (sel.value === ext) { const nxt = Array.from(sel.options).find(o => !o.disabled); if (nxt) sel.value = nxt.value; }
+}
+
+async function convertVideo() {
+  if (!vidFile) { showToast('Upload a video first.'); return; }
+  const fmt = document.getElementById('vidFormat').value;
+  document.getElementById('vidProgress').style.display = 'block';
+  document.getElementById('vidResult').style.display = 'none';
+  document.getElementById('vidProgressFill').style.width = '2%';
+  document.getElementById('vidProgressPct').textContent = '0%';
+  document.getElementById('vidConvertBtn').disabled = true;
+  try {
+    const ff = await getFFmpeg();
+    const inExt = vidFile.name.split('.').pop().toLowerCase();
+    const inName = 'input.' + inExt;
+    const outName = 'output.' + fmt;
+    document.getElementById('vidProgressLabel').textContent = 'Reading file…';
+    ff.FS('writeFile', inName, await window._fetchFile(vidFile));
+    let args = ['-i', inName];
+    if (fmt === 'mp4') args.push('-c:v','libx264','-preset','fast','-crf','23','-c:a','aac','-movflags','+faststart');
+    else if (fmt === 'mov') args.push('-c:v','libx264','-preset','fast','-crf','23','-c:a','aac');
+    else if (fmt === 'webm') args.push('-c:v','libvpx-vp9','-crf','33','-b:v','0','-c:a','libopus');
+    args.push(outName);
+    document.getElementById('vidProgressLabel').textContent = 'Converting…';
+    await ff.run(...args);
+    const data = ff.FS('readFile', outName);
+    const mimes = { mp4:'video/mp4', mov:'video/quicktime', webm:'video/webm' };
+    const blob = new Blob([data.buffer], { type: mimes[fmt] });
+    const url = URL.createObjectURL(blob);
+    try { ff.FS('unlink', inName); ff.FS('unlink', outName); } catch(e){}
+    document.getElementById('vidProgressFill').style.width = '100%';
+    document.getElementById('vidProgressPct').textContent = '100%';
+    document.getElementById('vidProgressLabel').textContent = 'Done!';
+    const base = vidFile.name.replace(/\.[^.]+$/, '');
+    document.getElementById('vidResultLabel').textContent = base + '.' + fmt + ' · ' + fmtSize(blob.size);
+    document.getElementById('vidDownloadBtn').onclick = () => dlBlob(url, base + '.' + fmt);
+    document.getElementById('vidResult').style.display = 'block';
+    showToast('Video converted!', 'success');
+  } catch(err) {
+    console.error(err);
+    showToast('Conversion failed: ' + err.message);
+    document.getElementById('vidProgress').style.display = 'none';
+  } finally { document.getElementById('vidConvertBtn').disabled = false; }
+}
+
+function resetVid() {
+  vidFile = null;
+  document.getElementById('vidInfo').style.display = 'none';
+  document.getElementById('vidProgress').style.display = 'none';
+  document.getElementById('vidResult').style.display = 'none';
+  document.getElementById('vidFileInput').value = '';
+}
+
+/* ══════════════════════
+   TOOL 3 — IMAGE CONVERTER
+══════════════════════ */
+let imgFile = null, imgOrigDataUrl = null;
+
+function handleImgFile(file) {
+  if (!file) return;
+  if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { showToast('Use JPG, PNG, or WEBP.'); return; }
+  if (file.size > 20 * 1024 * 1024) { showToast('File too large. Max 20 MB.'); return; }
+  imgFile = file;
+  document.getElementById('imgFileName').textContent = file.name;
+  document.getElementById('imgFileSize').textContent = fmtSize(file.size);
+  const rd = new FileReader();
+  rd.onload = e => {
+    imgOrigDataUrl = e.target.result;
+    document.getElementById('imgPreviewEl').src = imgOrigDataUrl;
+    document.getElementById('imgOptions').style.display = 'block';
+    document.getElementById('imgResult').style.display = 'none';
+    const sel = document.getElementById('imgFormat');
+    const other = Array.from(sel.options).find(o => o.value !== file.type);
+    if (other) sel.value = other.value;
+  };
+  rd.readAsDataURL(file);
+}
+
+function convertImage() {
+  if (!imgFile || !imgOrigDataUrl) { showToast('Upload an image first.'); return; }
+  const mime = document.getElementById('imgFormat').value;
+  const q = parseInt(document.getElementById('imgQuality').value) / 100;
+  const exts = { 'image/jpeg':'jpg', 'image/png':'png', 'image/webp':'webp' };
+  const ext = exts[mime] || 'jpg';
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    if (mime === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+    ctx.drawImage(img, 0, 0);
+    const result = canvas.toDataURL(mime, q);
+    const base = imgFile.name.replace(/\.[^.]+$/, '');
+    const outName = base + '_converted.' + ext;
+    document.getElementById('imgOrigResult').src = imgOrigDataUrl;
+    document.getElementById('imgConvResult').src = result;
+    document.getElementById('imgResult').style.display = 'block';
+    const approx = Math.round(result.split(',')[1].length * 0.75);
+    document.getElementById('imgResultSize').textContent = fmtSize(imgFile.size) + ' → ~' + fmtSize(approx);
+    const dl = () => dlBlob(result, outName);
+    document.getElementById('imgDownloadBtn').onclick = dl;
+    document.getElementById('imgDlHover').onclick = dl;
+    showToast('Image converted!', 'success');
+  };
+  img.src = imgOrigDataUrl;
+}
+
+function resetImg() {
+  imgFile = null; imgOrigDataUrl = null;
+  document.getElementById('imgOptions').style.display = 'none';
+  document.getElementById('imgResult').style.display = 'none';
+  document.getElementById('imgFileInput').value = '';
+}
+
+/* ══════════════════════
+   TOOL 4 — AI VIDEO EDITOR
+══════════════════════ */
+let faceDetection;
+let detectedFace = null;
+
+async function initMediaPipe() {
+  faceDetection = new FaceDetection({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`});
+  faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.5 });
+  faceDetection.onResults((results) => {
+    if (results.detections && results.detections.length > 0) {
+      detectedFace = results.detections[0].boundingBox;
+    }
+  });
+  const st = document.getElementById('vp-status');
+  if (st) st.textContent = '';
+}
+
+const vpInput = document.getElementById('vp-file');
+const vpBtn = document.getElementById('vp-process');
+let vpSelectedFile = null;
+
+if (vpInput) {
+vpInput.addEventListener('change', (e) => {
+  if(e.target.files.length) {
+    vpSelectedFile = e.target.files[0];
+    document.getElementById('vp-filename').innerHTML = vpSelectedFile.name;
+    vpBtn.disabled = false;
+    document.getElementById('vp-result').style.display = 'none';
+  }
+});
+
+vpBtn.addEventListener('click', async () => {
+  vpBtn.disabled = true;
+  document.getElementById('vp-prog-bar').style.display = 'block';
+  document.getElementById('vp-fill').style.width = '0%';
+  document.getElementById('vp-status').textContent = 'Loading AI models...';
+  
+  const enhanceAudio = document.getElementById('vp-audio').checked;
+  const format = document.getElementById('vp-format').value;
+
+  let cropData = {};
+
+  if (format !== 'original') {
+    document.getElementById('vp-status').textContent = 'Scanning for faces...';
+    const vid = document.getElementById('vp-vid-hidden');
+    vid.src = URL.createObjectURL(vpSelectedFile);
+    
+    await new Promise(r => { vid.onloadeddata = r; vid.currentTime = Math.min(2, vid.duration/2); });
+    await new Promise(r => { vid.onseeked = r; });
+    
+    await faceDetection.send({image: vid});
+    
+    const vW = vid.videoWidth;
+    const vH = vid.videoHeight;
+    
+    let tarW, tarH;
+    if (format === '9:16') { tarH = vH; tarW = Math.floor(vH * (9/16)); }
+    if (format === '1:1') { tarH = vH; tarW = vH > vW ? vW : vH; tarH = tarW; }
+    
+    let cX = 0, cY = 0;
+    if (detectedFace) {
+      let faceCenterX = (detectedFace.xCenter * vW);
+      cX = faceCenterX - (tarW / 2);
+      if (cX < 0) cX = 0;
+      if (cX + tarW > vW) cX = vW - tarW;
+      cY = (vH - tarH) / 2;
+    } else {
+      cX = (vW - tarW) / 2;
+      cY = (vH - tarH) / 2;
+    }
+    cropData = { cropX: cX, cropY: cY, cropW: tarW, cropH: tarH };
+  }
+
+  document.getElementById('vp-status').textContent = 'Uploading to Local Server...';
+  
+  const formData = new FormData();
+  formData.append('video', vpSelectedFile);
+  formData.append('enhanceAudio', enhanceAudio);
+  formData.append('targetFormat', format);
+  if(cropData.cropW) {
+    formData.append('cropW', cropData.cropW);
+    formData.append('cropH', cropData.cropH);
+    formData.append('cropX', cropData.cropX);
+    formData.append('cropY', cropData.cropY);
+  }
+
+  try {
+    const res = await fetch('http://localhost:3000/api/process', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('API Error');
+    const { jobId } = await res.json();
+    
+    const intv = setInterval(async () => {
+      const r = await fetch(`http://localhost:3000/api/status/${jobId}`);
+      const job = await r.json();
+      
+      document.getElementById('vp-fill').style.width = Math.min(job.progress, 100) + '%';
+      document.getElementById('vp-status').textContent = `Processing Video: ${job.progress}%`;
+
+      if (job.status === 'completed') {
+        clearInterval(intv);
+        document.getElementById('vp-status').textContent = 'Done!';
+        document.getElementById('vp-dl').href = `http://localhost:3000${job.file}`;
+        document.getElementById('vp-result').style.display = 'flex';
+        vpBtn.disabled = false;
+      } else if (job.status === 'error') {
+        clearInterval(intv);
+        document.getElementById('vp-status').textContent = 'Error processing video.';
+        vpBtn.disabled = false;
+      }
+    }, 1000);
+  } catch(err) {
+    document.getElementById('vp-status').textContent = 'Could not reach server at localhost:3000.';
+    vpBtn.disabled = false;
+  }
+});
+
+setTimeout(initMediaPipe, 100);
+}
+
+/* ══════════════════════
+   TOOL 5 — AUPHONIC
+══════════════════════ */
+const auInput = document.getElementById('au-file');
+const auBtn = document.getElementById('au-process');
+let auSelectedFile = null;
+
+if (auInput) {
+auInput.addEventListener('change', (e) => {
+  if (e.target.files.length) {
+    auSelectedFile = e.target.files[0];
+    document.getElementById('au-filename').innerHTML = auSelectedFile.name;
+    auBtn.disabled = false;
+    document.getElementById('au-result').style.display = 'none';
+  }
+});
+
+auBtn.addEventListener('click', async () => {
+  auBtn.disabled = true;
+  document.getElementById('au-prog-bar').style.display = 'block';
+  document.getElementById('au-fill').style.width = '5%';
+  document.getElementById('au-status').textContent = 'Uploading to API...';
+  
+  const fd = new FormData();
+  fd.append('media', auSelectedFile);
+
+  try {
+    const res = await fetch('http://localhost:3000/api/auphonic', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('API Error');
+    const { jobId } = await res.json();
+    
+    const intv = setInterval(async () => {
+      const r = await fetch(`http://localhost:3000/api/auphonic/status/${jobId}`);
+      const job = await r.json();
+      
+      document.getElementById('au-fill').style.width = job.progress + '%';
+      document.getElementById('au-status').textContent = job.step || `Processing...`;
+
+      if (job.status === 'completed') {
+        clearInterval(intv);
+        document.getElementById('au-dl').href = job.resultUrl;
+        document.getElementById('au-result').style.display = 'flex';
+        auBtn.disabled = false;
+      } else if (job.status === 'error') {
+        clearInterval(intv);
+        document.getElementById('au-status').textContent = 'Error: ' + job.error;
+        auBtn.disabled = false;
+      }
+    }, 4000);
+  } catch(err) {
+    document.getElementById('au-status').textContent = 'Could not reach server.';
+    auBtn.disabled = false;
+  }
+});
+}
+
+/* ══════════════════════
+   TOOL 6 — THUMBNAIL GENERATOR
+══════════════════════ */
+const thCanvas = document.getElementById('thCanvas');
+const thCtx = thCanvas ? thCanvas.getContext('2d') : null;
+let thImg = null;
+let thOrigImg = null; // unmodified original for face detection
+let thTextX = 640, thTextY = 620;
+let thDragging = false;
+let thOverlays = []; // emojis, arrows, circles
+let thDragOverlay = null;
+let thAR = {w:16,h:9};
+
+// File upload
+const thFileInput = document.getElementById('th-file');
+if (thFileInput) {
+thFileInput.addEventListener('change', async (e) => {
+  if (!e.target.files.length) return;
+  const f = e.target.files[0];
+  document.getElementById('th-filename').textContent = f.name;
+
+  if (f.type.startsWith('video/')) {
+    // Extract frame from video
+    const vid = document.createElement('video');
+    vid.muted = true; vid.playsInline = true;
+    vid.src = URL.createObjectURL(f);
+    await new Promise(r => { vid.onloadeddata = r; });
+    vid.currentTime = Math.min(2, vid.duration * 0.3);
+    await new Promise(r => { vid.onseeked = r; });
+    const tmpC = document.createElement('canvas');
+    tmpC.width = vid.videoWidth; tmpC.height = vid.videoHeight;
+    tmpC.getContext('2d').drawImage(vid, 0, 0);
+    thLoadImageFromCanvas(tmpC);
+  } else {
+    const img = new Image();
+    img.onload = () => { thLoadImage(img); };
+    img.src = URL.createObjectURL(f);
+  }
+});
+}
+
+function thLoadImage(img) {
+  thImg = img;
+  thOrigImg = img;
+  thOverlays = [];
+  thSetAR(thAR.w, thAR.h);
+  document.getElementById('thUploadArea').style.display = 'none';
+  document.getElementById('thEditor').style.display = 'block';
+  thSetTextPos();
+  thRender();
+}
+
+function thLoadImageFromCanvas(srcCanvas) {
+  const img = new Image();
+  img.onload = () => thLoadImage(img);
+  img.src = srcCanvas.toDataURL();
+}
+
+function thSetAR(w, h) {
+  thAR = {w, h};
+  const cW = 1280;
+  const cH = Math.round(cW * (h / w));
+  thCanvas.width = cW;
+  thCanvas.height = cH;
+  thTextY = cH - 100;
+  thTextX = cW / 2;
+  document.getElementById('thAR169').classList.toggle('active', w === 16);
+  document.getElementById('thAR11').classList.toggle('active', w === 1);
+  thRender();
+}
+
+function thSetTextPos() {
+  const pos = document.getElementById('thTextPos').value;
+  if (pos === 'top') { thTextX = thCanvas.width / 2; thTextY = 80; }
+  else if (pos === 'center') { thTextX = thCanvas.width / 2; thTextY = thCanvas.height / 2; }
+  else if (pos === 'bottom') { thTextX = thCanvas.width / 2; thTextY = thCanvas.height - 100; }
+}
+
+function thRender() {
+  if (!thCtx) return;
+  const c = thCanvas;
+  const ctx = thCtx;
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  // Filters
+  const bright = document.getElementById('thBright').value;
+  const contrast = document.getElementById('thContrast').value;
+  const saturate = document.getElementById('thSaturate').value;
+  ctx.filter = `brightness(${bright}%) contrast(${contrast}%) saturate(${saturate}%)`;
+
+  // Draw image (cover fit)
+  if (thImg) {
+    const iw = thImg.naturalWidth || thImg.width;
+    const ih = thImg.naturalHeight || thImg.height;
+    const scale = Math.max(c.width / iw, c.height / ih);
+    const dw = iw * scale, dh = ih * scale;
+    const dx = (c.width - dw) / 2, dy = (c.height - dh) / 2;
+    ctx.drawImage(thImg, dx, dy, dw, dh);
+  }
+
+  ctx.filter = 'none';
+
+  // Darken overlay
+  const darken = document.getElementById('thDarken').value;
+  if (darken > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${darken / 100})`;
+    ctx.fillRect(0, 0, c.width, c.height);
+  }
+
+  // Draw overlays (emojis, shapes)
+  thOverlays.forEach(o => {
+    if (o.type === 'emoji') {
+      ctx.font = `${o.size}px sans-serif`;
+      ctx.fillText(o.char, o.x, o.y);
+    } else if (o.type === 'circle') {
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (o.type === 'arrow') {
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(o.x, o.y);
+      ctx.lineTo(o.x + 120, o.y - 80);
+      ctx.stroke();
+      // Arrowhead
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.moveTo(o.x + 120, o.y - 80);
+      ctx.lineTo(o.x + 100, o.y - 65);
+      ctx.lineTo(o.x + 108, o.y - 95);
+      ctx.fill();
+    }
+  });
+
+  // Draw text
+  const text = document.getElementById('thText').value;
+  if (text) {
+    const fontSize = parseInt(document.getElementById('thFontSize').value);
+    document.getElementById('thFontSizeVal').textContent = fontSize;
+    const textColor = document.getElementById('thTextColor').value;
+    const strokeColor = document.getElementById('thStrokeColor').value;
+    const strokeW = parseInt(document.getElementById('thStrokeW').value);
+    const shadow = document.getElementById('thShadow').checked;
+
+    ctx.font = `900 ${fontSize}px 'Syne', Impact, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    if (shadow) {
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetX = 4;
+      ctx.shadowOffsetY = 4;
+    }
+
+    // Word wrap
+    const maxW = c.width - 100;
+    const lines = thWrapText(ctx, text, maxW);
+    const lineH = fontSize * 1.15;
+    const startY = thTextY - ((lines.length - 1) * lineH) / 2;
+
+    lines.forEach((line, i) => {
+      const ly = startY + i * lineH;
+      if (strokeW > 0) {
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = strokeW;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(line, thTextX, ly);
+      }
+      ctx.fillStyle = textColor;
+      ctx.fillText(line, thTextX, ly);
+    });
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+  }
+}
+
+function thWrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let currentLine = '';
+  for (const word of words) {
+    const test = currentLine ? currentLine + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = test;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+// Canvas mouse events for dragging text & overlays
+if (thCanvas) {
+thCanvas.addEventListener('mousedown', (e) => {
+  const rect = thCanvas.getBoundingClientRect();
+  const sx = thCanvas.width / rect.width;
+  const mx = (e.clientX - rect.left) * sx;
+  const my = (e.clientY - rect.top) * sx;
+
+  // Check overlays first
+  for (let i = thOverlays.length - 1; i >= 0; i--) {
+    const o = thOverlays[i];
+    const dist = Math.hypot(mx - o.x, my - o.y);
+    if (dist < (o.r || o.size || 60)) {
+      thDragOverlay = { idx: i, offX: mx - o.x, offY: my - o.y };
+      return;
+    }
+  }
+
+  // Otherwise drag text
+  thDragging = true;
+  document.getElementById('thTextPos').value = 'custom';
+});
+
+thCanvas.addEventListener('mousemove', (e) => {
+  const rect = thCanvas.getBoundingClientRect();
+  const sx = thCanvas.width / rect.width;
+  const mx = (e.clientX - rect.left) * sx;
+  const my = (e.clientY - rect.top) * sx;
+
+  if (thDragOverlay) {
+    thOverlays[thDragOverlay.idx].x = mx - thDragOverlay.offX;
+    thOverlays[thDragOverlay.idx].y = my - thDragOverlay.offY;
+    thRender();
+  } else if (thDragging) {
+    thTextX = mx;
+    thTextY = my;
+    thRender();
+  }
+});
+
+thCanvas.addEventListener('mouseup', () => { thDragging = false; thDragOverlay = null; });
+thCanvas.addEventListener('mouseleave', () => { thDragging = false; thDragOverlay = null; });
+}
+
+// Overlays
+function thAddEmoji(char) {
+  thOverlays.push({ type: 'emoji', char, x: 200 + Math.random() * 400, y: 200 + Math.random() * 200, size: 64 });
+  thRender();
+}
+function thAddShape(shape) {
+  if (shape === 'circle') thOverlays.push({ type: 'circle', x: thCanvas.width / 2, y: thCanvas.height / 2, r: 80 });
+  if (shape === 'arrow') thOverlays.push({ type: 'arrow', x: 300, y: 400 });
+  thRender();
+}
+function thClearOverlays() { thOverlays = []; thRender(); }
+
+// Auto effects
+function thAutoContrast() {
+  document.getElementById('thBright').value = 110;
+  document.getElementById('thContrast').value = 130;
+  document.getElementById('thSaturate').value = 140;
+  document.getElementById('thDarken').value = 15;
+  thRender();
+}
+
+async function thFaceZoom() {
+  if (!thOrigImg || !faceDetection) { showToast('No image or face AI not loaded'); return; }
+  // Create offscreen canvas to send to MediaPipe
+  const tmpC = document.createElement('canvas');
+  tmpC.width = thOrigImg.naturalWidth || thOrigImg.width;
+  tmpC.height = thOrigImg.naturalHeight || thOrigImg.height;
+  tmpC.getContext('2d').drawImage(thOrigImg, 0, 0);
+
+  detectedFace = null;
+  await faceDetection.send({ image: tmpC });
+
+  if (detectedFace) {
+    const iw = tmpC.width, ih = tmpC.height;
+    const cx = detectedFace.xCenter * iw;
+    const cy = detectedFace.yCenter * ih;
+    const fw = detectedFace.width * iw;
+    const fh = detectedFace.height * ih;
+    // Zoom: crop around face with padding
+    const pad = Math.max(fw, fh) * 1.8;
+    const sx = Math.max(0, cx - pad);
+    const sy = Math.max(0, cy - pad * 0.8);
+    const sw = Math.min(pad * 2, iw - sx);
+    const sh = Math.min(pad * 2, ih - sy);
+    const zoomC = document.createElement('canvas');
+    zoomC.width = thCanvas.width; zoomC.height = thCanvas.height;
+    zoomC.getContext('2d').drawImage(tmpC, sx, sy, sw, sh, 0, 0, zoomC.width, zoomC.height);
+    thLoadImageFromCanvas(zoomC);
+    showToast('Face zoomed!', 'success');
+  } else {
+    showToast('No face detected in image');
+  }
+}
+
+// AI Title Generator
+async function thGenerateAI() {
+  const prompt = document.getElementById('thAiPrompt').value.trim();
+  if (!prompt) { showToast('Describe your video topic first'); return; }
+  const el = document.getElementById('thAiResult');
+  el.textContent = 'Generating...';
+  try {
+    const res = await fetch('/api/groq', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: 'You are a YouTube thumbnail text expert. Generate 3 short, punchy, clickbait-style thumbnail titles (max 5-6 words each). Use CAPS for emphasis. Return only the 3 titles, numbered 1-3, nothing else.' },
+          { role: 'user', content: `Video topic: ${prompt}` }
+        ],
+        temperature: 0.9,
+        max_tokens: 150
+      })
+    });
+    const data = await res.json();
+    const text = data.choices[0].message.content;
+    el.innerHTML = '';
+    text.split('\n').filter(l => l.trim()).forEach(line => {
+      const btn = document.createElement('button');
+      btn.className = 'th-btn';
+      btn.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:4px;font-size:0.75rem;';
+      btn.textContent = line.replace(/^\d+[\.\)]\s*/, '');
+      btn.onclick = () => { document.getElementById('thText').value = btn.textContent; thRender(); };
+      el.appendChild(btn);
+    });
+  } catch(err) {
+    el.textContent = 'AI error: ' + err.message;
+  }
+}
+
+// Export
+function thExport(format) {
+  thRender(); // make sure canvas is fresh
+  const mime = format === 'png' ? 'image/png' : 'image/jpeg';
+  const quality = format === 'png' ? undefined : 0.95;
+  thCanvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `thumbnail_${Date.now()}.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, mime, quality);
+}
+
+function thResetEditor() {
+  thImg = null; thOrigImg = null; thOverlays = [];
+  document.getElementById('thUploadArea').style.display = 'block';
+  document.getElementById('thEditor').style.display = 'none';
+  document.getElementById('th-file').value = '';
+  document.getElementById('th-filename').innerHTML = 'Drop image or video, or <span style="color:var(--text);font-weight:500;">click to upload</span>';
+  document.getElementById('thText').value = '';
+  document.getElementById('thBright').value = 100;
+  document.getElementById('thContrast').value = 100;
+  document.getElementById('thSaturate').value = 100;
+  document.getElementById('thDarken').value = 0;
+}
+
+// AI Image Generation via Pollinations.ai (100% free, no key needed)
+async function thGenerateImage() {
+  const prompt = document.getElementById('thImgPrompt').value.trim();
+  if (!prompt) { showToast('Describe the thumbnail you want first'); return; }
+  const style = document.getElementById('thImgStyle').value;
+  const statusEl = document.getElementById('thGenImgStatus');
+  const btn = document.getElementById('thGenImgBtn');
+  
+  btn.disabled = true;
+  statusEl.textContent = '🎨 Generating your thumbnail... (10-20 seconds)';
+  
+  const w = thAR.w === 1 ? 1080 : 1280;
+  const h = thAR.w === 1 ? 1080 : 720;
+  const fullPrompt = encodeURIComponent(`${prompt}, ${style}, high quality, 4k`);
+  const url = `https://image.pollinations.ai/prompt/${fullPrompt}?width=${w}&height=${h}&nologo=true&seed=${Date.now()}`;
+  
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    statusEl.textContent = '';
+    btn.disabled = false;
+    thLoadImage(img);
+    showToast('AI thumbnail generated!', 'success');
+  };
+  img.onerror = () => {
+    statusEl.textContent = 'Generation failed. Try a different prompt.';
+    btn.disabled = false;
+  };
+  img.src = url;
+}
+</script>
+</body>
+</html>
