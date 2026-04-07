@@ -105,11 +105,20 @@ const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // Log key status on startup
-console.log('--- Environment Check ---');
-console.log('AUPHONIC_KEY:', AUPHONIC_KEY ? 'Present ✅' : 'MISSING ❌');
-console.log('REMOVE_BG_API_KEY:', REMOVE_BG_API_KEY ? 'Present ✅' : 'MISSING ❌');
-console.log('GROQ_API_KEY:', GROQ_API_KEY ? 'Present ✅' : 'MISSING ❌');
-console.log('-------------------------');
+function logKey(name, val) {
+  if (!val) {
+    console.log(`${name}: MISSING ❌`);
+  } else {
+    // Show first/last to verify sync without leaking full key
+    const preview = `${val.substring(0, 3)}...${val.substring(val.length - 3)}`;
+    console.log(`${name}: Present ✅ (Stats: Starts/Ends: ${preview}, Length: ${val.length})`);
+  }
+}
+console.log('\n--- Environment Check ---');
+logKey('AUPHONIC_KEY', AUPHONIC_KEY);
+logKey('REMOVE_BG_API_KEY', REMOVE_BG_API_KEY);
+logKey('GROQ_API_KEY', GROQ_API_KEY);
+console.log('-------------------------\n');
 
 // PROXY: REMOVE.BG
 app.post('/api/remove-bg', upload.single('image_file'), async (req, res) => {
