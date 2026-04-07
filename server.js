@@ -24,7 +24,11 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 if (!fs.existsSync('output')) fs.mkdirSync('output');
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
-app.use('/output', express.static(path.join(__dirname, 'output')));
+// Static output with download headers
+app.use('/output', (req, res, next) => {
+  res.setHeader('Content-Disposition', 'attachment');
+  next();
+}, express.static(path.join(__dirname, 'output')));
 
 const upload = multer({ dest: 'uploads/' });
 
@@ -238,19 +242,32 @@ app.post('/api/transcribe', upload.single('video'), async (req, res) => {
       text: transcript.text,
       words: transcript.words.map(w => ({
         word: w.text,
-        start: w.start / 1000, // Ms to seconds
+        start: w.start / 1000, 
         end: w.end / 1000
       })),
       segments: []
     };
 
-    // Group sentences as segments for traditional captions
-    const sentences = await aaiClient.transcripts.sentences(transcript.id);
-    normalizedData.segments = sentences.sentences.map(s => ({
-      start: s.start / 1000,
-      end: s.end / 1000,
-      text: s.text
-    }));
+    // SMART CHUNKING: Group words into ~1.0s segments for "Viral Style"
+    let currentSeg = null;
+    normalizedData.words.forEach((w, i) => {
+      if (!currentSeg) {
+        currentSeg = { start: w.start, end: w.end, text: w.word };
+      } else {
+        const duration = w.end - currentSeg.start;
+        // Split if segment > 1.0s OR if current text is long
+        if (duration > 1.0 || currentSeg.text.length > 20) {
+          normalizedData.segments.push(currentSeg);
+          currentSeg = { start: w.start, end: w.end, text: w.word };
+        } else {
+          currentSeg.text += " " + w.word;
+          currentSeg.end = w.end;
+        }
+      }
+      if (i === normalizedData.words.length - 1) {
+        normalizedData.segments.push(currentSeg);
+      }
+    });
 
     // 3. Store Result
     const videoFileName = `${jobId}${path.extname(req.file.originalname) || '.mp4'}`;
