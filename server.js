@@ -187,6 +187,167 @@ app.post('/api/groq', async (req, res) => {
   }
 });
 
+// AI AUTO-CAPTION GENERATOR: TRANSCRIPTION
+app.post('/api/transcribe', upload.single('video'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No video provided' });
+  
+  const jobId = uuidv4();
+  const inputPath = req.file.path;
+  const audioPath = path.join('uploads', `${jobId}.mp3`);
+  
+  jobs[jobId] = { status: 'processing', progress: 10, step: 'Extracting audio...' };
+  res.json({ jobId }); // Respond early
+
+  try {
+    // 1. Extract Audio
+    await new Promise((resolve, reject) => {
+      ffmpeg(inputPath)
+        .toFormat('mp3')
+        .audioChannels(1)
+        .audioFrequency(16000)
+        .on('progress', (p) => { jobs[jobId].progress = 10 + Math.floor((p.percent || 0) * 0.1); })
+        .on('end', resolve)
+        .on('error', reject)
+        .save(audioPath);
+    });
+
+    jobs[jobId].step = 'Transcribing with AI...';
+    jobs[jobId].progress = 30;
+
+    // 2. Transcribe with Groq (Whisper v3)
+    const fileBuffer = fs.readFileSync(audioPath);
+    const blob = new Blob([fileBuffer], { type: 'audio/mpeg' });
+    const formData = new FormData();
+    formData.append('file', blob, 'audio.mp3');
+    formData.append('model', 'whisper-large-v3');
+    formData.append('response_format', 'verbose_json');
+    formData.append('timestamp_granularities[]', 'word'); // Get word-level timestamps
+
+    const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` },
+      body: formData
+    });
+
+    if (!groqRes.ok) {
+      const errTxt = await groqRes.text();
+      throw new Error(`Groq API failed: ${errTxt}`);
+    }
+
+    const data = await groqRes.json();
+    
+    // 3. Store Result
+    jobs[jobId].status = 'completed';
+    jobs[jobId].progress = 100;
+    jobs[jobId].step = 'Transcription complete!';
+    jobs[jobId].transcription = data; // Includes 'words' array with start/end
+    
+    // Cleanup
+    fs.unlink(inputPath, () => {});
+    fs.unlink(audioPath, () => {});
+
+  } catch (err) {
+    console.error('Transcription Error:', err);
+    jobs[jobId].status = 'error';
+    jobs[jobId].error = err.message;
+    fs.unlink(inputPath, () => {});
+    if (fs.existsSync(audioPath)) fs.unlink(audioPath, () => {});
+  }
+});
+
+// AI AUTO-CAPTION GENERATOR: BURN-IN EXPORT
+app.post('/api/burn-captions', async (req, res) => {
+  const { jobId, originalFile, segments, style } = req.body;
+  if (!jobId || !segments) return res.status(400).json({ error: 'Missing data' });
+
+  const exportJobId = uuidv4();
+  const inputPath = path.join(__dirname, originalFile.replace('/output/', 'output/'));
+  const assPath = path.join('uploads', `${exportJobId}.ass`);
+  const outputPath = path.join('output', `${exportJobId}.mp4`);
+
+  jobs[exportJobId] = { status: 'processing', progress: 5, step: 'Generating subtitle styles...' };
+  res.json({ jobId: exportJobId });
+
+  try {
+    // 1. Generate ASS file content
+    const assContent = generateAssContent(segments, style);
+    fs.writeFileSync(assPath, assContent);
+
+    // 2. FFmpeg Burn-in
+    // Note: FFmpeg subtitles filter needs path with escaped backslashes on Windows
+    const escapedAssPath = assPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+    
+    ffmpeg(inputPath)
+      .videoFilters(`subtitles=${escapedAssPath}`)
+      .outputOptions([
+        '-c:v libx264',
+        '-preset fast',
+        '-crf 23',
+        '-c:a copy', // Keep original audio
+        '-movflags +faststart'
+      ])
+      .on('progress', (p) => { jobs[exportJobId].progress = 10 + Math.floor((p.percent || 0) * 0.85); })
+      .on('end', () => {
+        jobs[exportJobId].status = 'completed';
+        jobs[exportJobId].progress = 100;
+        jobs[exportJobId].file = `/output/${exportJobId}.mp4`;
+        fs.unlink(assPath, () => {});
+      })
+      .on('error', (err) => {
+        console.error('Burn-in Error:', err);
+        jobs[exportJobId].status = 'error';
+        jobs[exportJobId].error = err.message;
+      })
+      .save(outputPath);
+
+  } catch (err) {
+    console.error('Export Error:', err);
+    jobs[exportJobId].status = 'error';
+    jobs[exportJobId].error = err.message;
+  }
+});
+
+function generateAssContent(segments, style) {
+  const { fontSize = 24, primaryColor = '&H00FFFFFF', outlineColor = '&H00000000', outlineWidth = 2, position = 'bottom' } = style;
+  
+  // Alignment: 2=Bottom, 6=Top, 10=Middle (approx)
+  let alignment = 2;
+  if (position === 'top') alignment = 6;
+  if (position === 'middle') alignment = 10;
+
+  const header = `[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Montserrat,${fontSize * 2},${primaryColor},${primaryColor},${outlineColor},&H80000000,-1,0,0,0,100,100,0,0,1,${outlineWidth},0,${alignment},10,10,100,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+`;
+
+  const events = segments.map(s => {
+    const start = formatAssTime(s.start);
+    const end = formatAssTime(s.end);
+    // Simple sanitization
+    const text = s.text.replace(/\n/g, ' ').trim();
+    return `Dialogue: 0,${start},${end},Default,,0,0,0,,${text}`;
+  }).join('\n');
+
+  return header + events;
+}
+
+function formatAssTime(seconds) {
+  const date = new Date(seconds * 1000);
+  const hh = Math.floor(seconds / 3600);
+  const mm = date.getUTCMinutes();
+  const ss = date.getUTCSeconds();
+  const ms = Math.floor(date.getUTCMilliseconds() / 10);
+  return `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
+}
+
 app.post('/api/auphonic', upload.single('media'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No media provided' });
   const jobId = uuidv4();

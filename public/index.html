@@ -201,6 +201,7 @@
       <a class="nav-link" href="#video-conv" onclick="smoothScroll('video-conv');return false;">Video Converter</a>
       <a class="nav-link" href="#img-conv" onclick="smoothScroll('img-conv');return false;">Image Converter</a>
       <a class="nav-link" href="#ai-video" onclick="smoothScroll('ai-video');return false;">AI Video Editor</a>
+      <a class="nav-link" href="#auto-caption" onclick="smoothScroll('auto-caption');return false;">AI Captions</a>
       <a class="nav-link" href="#auphonic" onclick="smoothScroll('auphonic');return false;">Auphonic Audio</a>
     </nav>
     <div style="flex-shrink:0;">
@@ -502,6 +503,127 @@
     
     <video id="vp-vid-hidden" style="display:none;" muted playsinline></video>
   </section>
+
+  <!-- ═══ TOOL 4.5: AI AUTO-CAPTION GENERATOR ═══ -->
+  <section id="auto-caption" class="card" style="padding:2rem;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.5rem;flex-wrap:wrap;">
+      <div class="section-dot" style="background:#a855f7;"></div>
+      <h2 style="font-size:1.25rem;font-weight:700;margin:0;">AI Auto-Caption Generator</h2>
+      <span class="badge" style="margin-left:auto;color:#a855f7;border-color:rgba(168,85,247,0.2);background:rgba(168,85,247,0.1);">Powered by Whisper v3</span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin:0 0 1.5rem;">Generate engaging, social-media-ready captions with word-level timing and premium styles.</p>
+
+    <!-- Step 1: Upload -->
+    <div id="cap-upload-stage">
+      <div class="dropzone" id="capDropzone" style="padding:3rem 1rem;text-align:center;margin-bottom:1.5rem;" onclick="document.getElementById('cap-file').click()">
+        <input type="file" id="cap-file" accept="video/mp4,video/quicktime" hidden onchange="handleCapFile(this.files[0])" />
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" style="margin:0 auto 15px;display:block;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        <div style="font-size:1rem;font-weight:600;margin-bottom:4px;">Upload Video for Captions</div>
+        <p style="font-size:0.8rem;color:var(--muted);margin:0;">MP4, MOV up to 100MB · Max 2 mins recommended</p>
+      </div>
+    </div>
+
+    <!-- Step 2: Editor (hidden until upload) -->
+    <div id="cap-editor-stage" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;@media(max-width:900px){grid-template-columns:1fr;}">
+        <!-- Left: Preview Player -->
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div id="cap-player-container" style="position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:600px;margin:0 auto;">
+            <video id="cap-video" style="width:100%;height:100%;object-fit:contain;" playsinline></video>
+            <!-- CAPTION OVERLAY -->
+            <div id="cap-overlay" style="position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end;padding:40px 20px;text-align:center;">
+              <div id="cap-text-wrap" style="transform-origin:center;transition:all 0.1s ease;">
+                <span id="cap-current-text" style="display:inline-block;padding:4px 12px;border-radius:4px;"></span>
+              </div>
+            </div>
+            <!-- Progress Bar Overlay -->
+            <div id="cap-video-progress" style="position:absolute;bottom:0;left:0;height:4px;background:var(--accent);width:0%;transition:width 0.1s;"></div>
+          </div>
+          
+          <div style="display:flex;gap:10px;justify-content:center;">
+             <button class="th-btn" onclick="toggleCapPlay()" id="cap-play-btn">Play Preview</button>
+             <button class="th-btn" onclick="resetCapVideo()">✕ Reset</button>
+          </div>
+        </div>
+
+        <!-- Right: Controls -->
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <!-- Style Presets -->
+          <div class="th-group">
+            <h4>🎭 Style Presets</h4>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+               <button class="th-btn active" onclick="setCapPreset('tiktok')">TikTok/Reels</button>
+               <button class="th-btn" onclick="setCapPreset('minimal')">Minimalist</button>
+               <button class="th-btn" onclick="setCapPreset('bold')">Bold Focus</button>
+               <button class="th-btn" onclick="setCapPreset('srt')">Basic SRT</button>
+            </div>
+          </div>
+
+          <!-- Customization -->
+          <div class="th-group">
+            <h4>🎨 Customization</h4>
+            <div class="th-row">
+              <label>Font Size</label>
+              <input type="range" id="capFontSize" min="16" max="64" value="32" oninput="updateCapStyle()" />
+            </div>
+            <div class="th-row">
+              <label>Text Color</label>
+              <input type="color" id="capTextColor" value="#ffffff" oninput="updateCapStyle()" />
+              <label>Highlight</label>
+              <input type="color" id="capHighlightColor" value="#ffea00" oninput="updateCapStyle()" />
+            </div>
+            <div class="th-row">
+              <label>Outline</label>
+              <input type="color" id="capOutlineColor" value="#000000" oninput="updateCapStyle()" />
+              <label>Width</label>
+              <input type="range" id="capOutlineWidth" min="0" max="8" value="3" oninput="updateCapStyle()" />
+            </div>
+            <div class="th-row">
+              <label>Position</label>
+              <select id="capPosition" onchange="updateCapStyle()">
+                <option value="top">Top</option>
+                <option value="middle">Middle</option>
+                <option value="bottom" selected>Bottom</option>
+              </select>
+            </div>
+            <div class="th-row">
+              <label>Animation</label>
+              <select id="capAnim" onchange="updateCapStyle()">
+                <option value="word">Word-by-word</option>
+                <option value="segment">Line-by-line</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Export -->
+          <div class="th-group" style="border-color:rgba(34,197,94,0.3);">
+            <h4>📥 Export</h4>
+            <button class="btn-accent" style="width:100%;justify-content:center;margin-bottom:8px;background:#22c55e;border-color:#22c55e;" onclick="exportCapVideo()">Download MP4 (Burn-in)</button>
+            <button class="btn-ghost" style="width:100%;justify-content:center;" onclick="downloadSRT()">Download SRT File</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Caption Editor -->
+      <div style="margin-top:2rem;">
+        <h3 style="font-family:'Syne';font-size:1rem;margin-bottom:1rem;">Edit Captions</h3>
+        <div id="cap-list" style="max-height:300px;overflow-y:auto;background:var(--surface3);border-radius:12px;border:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:8px;">
+          <!-- Segments populated here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="cap-loading" style="display:none;padding:3rem 1rem;text-align:center;">
+       <div class="spinner" style="width:40px;height:40px;margin-bottom:1rem;"></div>
+       <div id="cap-loading-step" style="font-weight:600;margin-bottom:4px;">Processing...</div>
+       <div id="cap-loading-status" style="font-size:0.8rem;color:var(--muted);">Hold tight, AI is transcribing.</div>
+       <div class="vp-progress" style="display:block;max-width:300px;margin:1.5rem auto 0;">
+         <div class="vp-fill" id="cap-fill" style="width:0%;"></div>
+       </div>
+    </div>
+  </section>
+
 
   <!-- ═══ TOOL 5: AUPHONIC ENHANCER ═══ -->
   <section id="auphonic" class="card" style="padding:2rem;">
@@ -1552,6 +1674,256 @@ async function thGenerateImage() {
   };
   img.src = url;
 }
+/* ══════════════════════
+   TOOL 4.5 — AI AUTO-CAPTION
+══════════════════════ */
+let capSegments = [];
+let capWords = [];
+let capOriginalFile = null;
+let capStyle = {
+  fontSize: 32,
+  primaryColor: '#ffffff',
+  highlightColor: '#ffea00',
+  outlineColor: '#000000',
+  outlineWidth: 3,
+  position: 'bottom',
+  animation: 'word'
+};
+
+async function handleCapFile(file) {
+  if (!file) return;
+  capOriginalFile = file;
+  
+  // 1. Show Loading
+  document.getElementById('cap-upload-stage').style.display = 'none';
+  document.getElementById('cap-loading').style.display = 'block';
+  
+  // Preview the video locally immediately
+  const videoUrl = URL.createObjectURL(file);
+  const videoEl = document.getElementById('cap-video');
+  videoEl.src = videoUrl;
+
+  // 2. Upload and Transcribe
+  try {
+    const fd = new FormData();
+    fd.append('video', file);
+    const res = await fetch('/api/transcribe', { method: 'POST', body: fd });
+    const { jobId } = await res.json();
+    
+    // 3. Poll Status
+    const poll = setInterval(async () => {
+      const sres = await fetch(`/api/status/${jobId}`);
+      const job = await sres.json();
+      
+      document.getElementById('cap-loading-step').textContent = job.step || 'Processing...';
+      document.getElementById('cap-fill').style.width = (job.progress || 0) + '%';
+      
+      if (job.status === 'completed') {
+        clearInterval(poll);
+        capSegments = job.transcription.segments;
+        capWords = job.transcription.words || [];
+        renderCapEditor();
+        updateCapStyle();
+        
+        document.getElementById('cap-loading').style.display = 'none';
+        document.getElementById('cap-editor-stage').style.display = 'block';
+        
+        // Final video path for burn-in (relative to public)
+        capOriginalFileServer = job.file; 
+      } else if (job.status === 'error') {
+        clearInterval(poll);
+        showToast('Transcription failed: ' + job.error);
+        resetCapVideo();
+      }
+    }, 1500);
+  } catch (err) {
+    showToast('Network error');
+    resetCapVideo();
+  }
+}
+
+function renderCapEditor() {
+  const list = document.getElementById('cap-list');
+  list.innerHTML = capSegments.map((s, i) => `
+    <div style="display:flex;gap:10px;align-items:center;background:rgba(255,255,255,0.03);padding:8px;border-radius:8px;">
+      <span style="font-size:0.7rem;color:var(--muted);width:60px;">${s.start.toFixed(2)}s</span>
+      <input type="text" value="${s.text}" oninput="capSegments[${i}].text = this.value" style="flex:1;background:transparent;border:none;color:#fff;font-size:0.85rem;" />
+    </div>
+  `).join('');
+}
+
+function updateCapStyle() {
+  capStyle = {
+    fontSize: parseInt(document.getElementById('capFontSize').value),
+    primaryColor: document.getElementById('capTextColor').value,
+    highlightColor: document.getElementById('capHighlightColor').value,
+    outlineColor: document.getElementById('capOutlineColor').value,
+    outlineWidth: parseInt(document.getElementById('capOutlineWidth').value),
+    position: document.getElementById('capPosition').value,
+    animation: document.getElementById('capAnim').value
+  };
+  
+  const overlay = document.getElementById('cap-overlay');
+  overlay.style.justifyContent = capStyle.position === 'top' ? 'flex-start' : (capStyle.position === 'middle' ? 'center' : 'flex-end');
+  
+  const textWrap = document.getElementById('cap-current-text');
+  textWrap.style.fontSize = capStyle.fontSize + 'px';
+  textWrap.style.color = capStyle.primaryColor;
+  textWrap.style.webkitTextStroke = `${capStyle.outlineWidth}px ${capStyle.outlineColor}`;
+  textWrap.style.fontWeight = '800';
+  textWrap.style.fontFamily = "'Syne', sans-serif";
+  textWrap.style.textTransform = 'uppercase';
+}
+
+function toggleCapPlay() {
+  const v = document.getElementById('cap-video');
+  const b = document.getElementById('cap-play-btn');
+  if (v.paused) { v.play(); b.textContent = 'Pause'; }
+  else { v.pause(); b.textContent = 'Play Preview'; }
+}
+
+// Live Preview Animation Loop
+document.getElementById('cap-video').ontimeupdate = function() {
+  const time = this.currentTime;
+  const progressFill = document.getElementById('cap-video-progress');
+  progressFill.style.width = (time / this.duration * 100) + '%';
+  
+  const textEl = document.getElementById('cap-current-text');
+  
+  if (capStyle.animation === 'word' && capWords.length > 0) {
+    // Word-by-word mode
+    const currentWord = capWords.find(w => time >= w.start && time <= w.end);
+    if (currentWord) {
+      // Find segment this word belongs to for context (optional 1-3 word window)
+      const segment = capSegments.find(s => time >= s.start && time <= s.end);
+      if (segment) {
+        // Highlight active word in segment
+        const wordsInSeg = segment.text.split(' ');
+        // This is a simplified version: just show the active word for high impact
+        textEl.textContent = currentWord.word.toUpperCase();
+        textEl.style.color = capStyle.highlightColor;
+        textEl.style.transform = 'scale(1.2)';
+      }
+    } else {
+      textEl.textContent = '';
+    }
+  } else {
+    // Segment mode
+    const segment = capSegments.find(s => time >= s.start && time <= s.end);
+    if (segment) {
+      textEl.textContent = segment.text.toUpperCase();
+      textEl.style.color = capStyle.primaryColor;
+      textEl.style.transform = 'scale(1)';
+    } else {
+      textEl.textContent = '';
+    }
+  }
+};
+
+function setCapPreset(p) {
+  const btns = document.querySelectorAll('#cap-editor-stage .th-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  if (p === 'tiktok') {
+    document.getElementById('capFontSize').value = 42;
+    document.getElementById('capHighlightColor').value = '#ffea00';
+    document.getElementById('capOutlineWidth').value = 4;
+    document.getElementById('capAnim').value = 'word';
+    document.getElementById('capPosition').value = 'middle';
+  } else if (p === 'minimal') {
+    document.getElementById('capFontSize').value = 24;
+    document.getElementById('capOutlineWidth').value = 0;
+    document.getElementById('capAnim').value = 'segment';
+    document.getElementById('capPosition').value = 'bottom';
+    document.getElementById('capTextColor').value = '#ffffff';
+  } else if (p === 'bold') {
+    document.getElementById('capFontSize').value = 48;
+    document.getElementById('capTextColor').value = '#ffffff';
+    document.getElementById('capHighlightColor').value = '#00ff00';
+    document.getElementById('capAnim').value = 'segment';
+  }
+  updateCapStyle();
+}
+
+async function exportCapVideo() {
+  if (!capOriginalFileServer) return showToast('Please wait for transcription.');
+  
+  showToast('Starting export... This may take a moment.', 'success');
+  
+  try {
+    const res = await fetch('/api/burn-captions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jobId: Date.now().toString(),
+        originalFile: capOriginalFileServer,
+        segments: capSegments,
+        style: {
+          fontSize: capStyle.fontSize,
+          primaryColor: hexToAss(capStyle.primaryColor),
+          outlineColor: hexToAss(capStyle.outlineColor),
+          outlineWidth: capStyle.outlineWidth,
+          position: capStyle.position
+        }
+      })
+    });
+    
+    const { jobId } = await res.json();
+    
+    // Poll for export status
+    const poll = setInterval(async () => {
+      const sres = await fetch(`/api/status/${jobId}`);
+      const job = await sres.json();
+      
+      if (job.status === 'completed') {
+        clearInterval(poll);
+        dlBlob(job.file, 'captioned_video.mp4');
+        showToast('Export complete!', 'success');
+      }
+    }, 2000);
+  } catch (err) {
+    showToast('Export failed');
+  }
+}
+
+function hexToAss(hex) {
+  // Convert #RRGGBB to &HBBGGRR
+  const r = hex.substr(1, 2);
+  const g = hex.substr(3, 2);
+  const b = hex.substr(5, 2);
+  return `&H00${b}${g}${r}`;
+}
+
+function downloadSRT() {
+  let srt = '';
+  capSegments.forEach((s, i) => {
+    srt += `${i + 1}\n${formatSrtTime(s.start)} --> ${formatSrtTime(s.end)}\n${s.text}\n\n`;
+  });
+  const blob = new Blob([srt], { type: 'text/srt' });
+  const url = URL.createObjectURL(blob);
+  dlBlob(url, 'subtitles.srt');
+}
+
+function formatSrtTime(seconds) {
+  const date = new Date(seconds * 1000);
+  const hh = String(Math.floor(seconds / 3600)).padStart(2, '0');
+  const mm = String(date.getUTCMinutes()).padStart(2, '0');
+  const ss = String(date.getUTCSeconds()).padStart(2, '0');
+  const ms = String(date.getUTCMilliseconds()).padStart(3, '0');
+  return `${hh}:${mm}:${ss},${ms}`;
+}
+
+function resetCapVideo() {
+  document.getElementById('cap-upload-stage').style.display = 'block';
+  document.getElementById('cap-editor-stage').style.display = 'none';
+  document.getElementById('cap-loading').style.display = 'none';
+  const v = document.getElementById('cap-video');
+  v.pause();
+  v.src = '';
+  capOriginalFile = null;
+}
+
 </script>
 </body>
 </html>
