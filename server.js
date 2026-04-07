@@ -8,9 +8,14 @@ const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const ffmpeg = require('fluent-ffmpeg');
+const { AssemblyAI } = require('assemblyai');
 const ffmpegPath = process.env.NODE_ENV === 'production' ? 'ffmpeg' : require('ffmpeg-static');
 ffmpeg.setFfmpegPath(ffmpegPath);
 console.log(`Using FFmpeg path: ${ffmpegPath}`);
+
+const aaiClient = new AssemblyAI({
+  apiKey: process.env.ASSEMBLYAI_API_KEY
+});
 
 const app = express();
 app.use(morgan('combined'));
@@ -103,6 +108,7 @@ app.get('/api/status/:id', (req, res) => {
 const AUPHONIC_KEY = process.env.AUPHONIC_KEY;
 const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY || process.env['bg remover'];
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY;
 
 // Log key status on startup
 function logKey(name, val) {
@@ -118,6 +124,7 @@ console.log('\n--- Environment Check ---');
 logKey('AUPHONIC_KEY', AUPHONIC_KEY);
 logKey('REMOVE_BG_API_KEY', REMOVE_BG_API_KEY);
 logKey('GROQ_API_KEY', GROQ_API_KEY);
+logKey('ASSEMBLYAI_API_KEY', ASSEMBLYAI_API_KEY);
 console.log('-------------------------\n');
 
 // PROXY: REMOVE.BG
@@ -211,57 +218,39 @@ app.post('/api/transcribe', upload.single('video'), async (req, res) => {
         .save(audioPath);
     });
 
-    jobs[jobId].step = 'Transcribing with AI...';
+    jobs[jobId].step = 'Transcribing with AssemblyAI...';
     jobs[jobId].progress = 30;
 
-    // 2. Transcribe with Groq (Whisper v3)
-    const fileBuffer = fs.readFileSync(audioPath);
-    const blob = new Blob([fileBuffer], { type: 'audio/mpeg' });
-    const formData = new FormData();
-    formData.append('file', blob, 'audio.mp3');
-    formData.append('model', 'whisper-large-v3');
-    formData.append('response_format', 'verbose_json');
-    formData.append('timestamp_granularities[]', 'word'); // Get word-level timestamps
-
-    const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` },
-      body: formData
+    // 2. Transcribe with AssemblyAI
+    const transcript = await aaiClient.transcripts.transcribe({
+      audio: audioPath,
+      punctuate: true,
+      format_text: true
     });
 
-    if (!groqRes.ok) {
-      const errTxt = await groqRes.text();
-      throw new Error(`Groq API failed: ${errTxt}`);
+    if (transcript.status === 'error') {
+      throw new Error(`AssemblyAI failed: ${transcript.error}`);
     }
 
-    const data = await groqRes.json();
-    console.log(`[Transcription] Received data for job ${jobId}`);
+    // Map AssemblyAI response to our internal format
+    const normalizedData = {
+      text: transcript.text,
+      words: transcript.words.map(w => ({
+        word: w.text,
+        start: w.start / 1000, // Ms to seconds
+        end: w.end / 1000
+      })),
+      segments: []
+    };
 
-    // Normalize transcription data
-    if (!data.segments || data.segments.length === 0) {
-      if (data.words && data.words.length > 0) {
-        // Fallback: Group words into segments if segments are missing
-        console.log(`[Transcription] Segments missing, reconstructing from words...`);
-        data.segments = [];
-        let currentSeg = { start: data.words[0].start, end: data.words[0].end, text: "" };
-        data.words.forEach((w, i) => {
-          currentSeg.text += (currentSeg.text ? " " : "") + w.word;
-          currentSeg.end = w.end;
-          // Every 10 words or 3 seconds, start a new segment
-          if ((i + 1) % 10 === 0 || (w.end - currentSeg.start) > 3) {
-            data.segments.push(currentSeg);
-            if (data.words[i+1]) {
-              currentSeg = { start: data.words[i+1].start, end: data.words[i+1].end, text: "" };
-            }
-          }
-        });
-        if (currentSeg.text && !data.segments.includes(currentSeg)) data.segments.push(currentSeg);
-      } else if (data.text) {
-        // Ultimate fallback: Just one big segment
-        data.segments = [{ start: 0, end: data.duration || 60, text: data.text }];
-      }
-    }
-    
+    // Group sentences as segments for traditional captions
+    const sentences = await aaiClient.transcripts.sentences(transcript.id);
+    normalizedData.segments = sentences.sentences.map(s => ({
+      start: s.start / 1000,
+      end: s.end / 1000,
+      text: s.text
+    }));
+
     // 3. Store Result
     const videoFileName = `${jobId}${path.extname(req.file.originalname) || '.mp4'}`;
     const preservedPath = path.join('output', videoFileName);
@@ -270,7 +259,7 @@ app.post('/api/transcribe', upload.single('video'), async (req, res) => {
     jobs[jobId].status = 'completed';
     jobs[jobId].progress = 100;
     jobs[jobId].step = 'Transcription complete!';
-    jobs[jobId].transcription = data;
+    jobs[jobId].transcription = normalizedData;
     jobs[jobId].file = `/output/${videoFileName}`;
     
     fs.unlink(audioPath, () => {});
