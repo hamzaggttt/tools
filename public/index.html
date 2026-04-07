@@ -528,11 +528,11 @@
       <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;@media(max-width:900px){grid-template-columns:1fr;}">
         <!-- Left: Preview Player -->
         <div style="display:flex;flex-direction:column;gap:1rem;">
-          <div id="cap-player-container" style="position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:600px;margin:0 auto;">
+          <div id="cap-player-container" style="position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:9/16;max-height:600px;margin:0 auto;user-select:none;">
             <video id="cap-video" style="width:100%;height:100%;object-fit:contain;" playsinline></video>
             <!-- CAPTION OVERLAY -->
-            <div id="cap-overlay" style="position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end;padding:40px 20px;text-align:center;">
-              <div id="cap-text-wrap" style="transform-origin:center;transition:all 0.1s ease;">
+            <div id="cap-overlay" style="position:absolute;inset:0;pointer-events:auto;display:flex;flex-direction:column;justify-content:flex-end;padding:40px 20px;text-align:center;cursor:grab;">
+              <div id="cap-text-wrap" style="position:absolute;transform:translate(-50%, -50%);left:50%;top:80%;transition:none;white-space:nowrap;">
                 <span id="cap-current-text" style="display:inline-block;padding:4px 12px;border-radius:4px;"></span>
               </div>
             </div>
@@ -584,6 +584,7 @@
                 <option value="top">Top</option>
                 <option value="middle">Middle</option>
                 <option value="bottom" selected>Bottom</option>
+                <option value="custom">Custom (Draggable)</option>
               </select>
             </div>
             <div class="th-row">
@@ -1688,8 +1689,54 @@ let capStyle = {
   outlineColor: '#000000',
   outlineWidth: 3,
   position: 'bottom',
-  animation: 'word'
+  animation: 'word',
+  posX: 50, // %
+  posY: 80  // %
 };
+
+/* ... other code ... */
+
+// Drag and Drop State
+let isDraggingCap = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('cap-overlay');
+  const container = document.getElementById('cap-player-container');
+  
+  overlay.addEventListener('pointerdown', (e) => {
+    isDraggingCap = true;
+    overlay.style.cursor = 'grabbing';
+    updateDragPosition(e);
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!isDraggingCap) return;
+    updateDragPosition(e);
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (!isDraggingCap) return;
+    isDraggingCap = false;
+    overlay.style.cursor = 'grab';
+  });
+
+  function updateDragPosition(e) {
+    const rect = container.getBoundingClientRect();
+    let x = ((e.clientX - rect.left) / rect.width) * 100;
+    let y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    // Constraints
+    x = Math.max(5, Math.min(95, x));
+    y = Math.max(5, Math.min(95, y));
+    
+    capStyle.posX = x;
+    capStyle.posY = y;
+    capStyle.position = 'custom';
+    document.getElementById('capPosition').value = 'custom';
+    
+    updateCapStyle();
+  }
+});
 
 async function handleCapFile(file) {
   if (!file) return;
@@ -1773,19 +1820,35 @@ function updateCapStyle() {
     outlineColor: document.getElementById('capOutlineColor').value,
     outlineWidth: parseInt(document.getElementById('capOutlineWidth').value),
     position: document.getElementById('capPosition').value,
-    animation: document.getElementById('capAnim').value
+    animation: document.getElementById('capAnim').value,
+    posX: capStyle.posX || 50,
+    posY: capStyle.posY || 80
   };
   
-  const overlay = document.getElementById('cap-overlay');
-  overlay.style.justifyContent = capStyle.position === 'top' ? 'flex-start' : (capStyle.position === 'middle' ? 'center' : 'flex-end');
+  const textWrap = document.getElementById('cap-text-wrap');
   
-  const textWrap = document.getElementById('cap-current-text');
-  textWrap.style.fontSize = capStyle.fontSize + 'px';
-  textWrap.style.color = capStyle.primaryColor;
-  textWrap.style.webkitTextStroke = `${capStyle.outlineWidth}px ${capStyle.outlineColor}`;
-  textWrap.style.fontWeight = '800';
-  textWrap.style.fontFamily = "'Syne', sans-serif";
-  textWrap.style.textTransform = 'uppercase';
+  if (capStyle.position === 'top') {
+    textWrap.style.top = '15%';
+    textWrap.style.left = '50%';
+  } else if (capStyle.position === 'middle') {
+    textWrap.style.top = '50%';
+    textWrap.style.left = '50%';
+  } else if (capStyle.position === 'bottom') {
+    textWrap.style.top = '85%';
+    textWrap.style.left = '50%';
+  } else {
+    // Custom
+    textWrap.style.top = `${capStyle.posY}%`;
+    textWrap.style.left = `${capStyle.posX}%`;
+  }
+  
+  const textEl = document.getElementById('cap-current-text');
+  textEl.style.fontSize = capStyle.fontSize + 'px';
+  textEl.style.color = capStyle.primaryColor;
+  textEl.style.webkitTextStroke = `${capStyle.outlineWidth}px ${capStyle.outlineColor}`;
+  textEl.style.fontWeight = '800';
+  textEl.style.fontFamily = "'Syne', sans-serif";
+  textEl.style.textTransform = 'uppercase';
 }
 
 function toggleCapPlay() {
@@ -1877,7 +1940,9 @@ async function exportCapVideo() {
           primaryColor: hexToAss(capStyle.primaryColor),
           outlineColor: hexToAss(capStyle.outlineColor),
           outlineWidth: capStyle.outlineWidth,
-          position: capStyle.position
+          position: capStyle.position,
+          posX: capStyle.posX,
+          posY: capStyle.posY
         }
       })
     });

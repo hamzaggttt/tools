@@ -333,35 +333,38 @@ app.post('/api/burn-captions', async (req, res) => {
 });
 
 function generateAssContent(segments, style) {
-  const { fontSize = 24, primaryColor = '&H00FFFFFF', outlineColor = '&H00000000', outlineWidth = 2, position = 'bottom' } = style;
+  const { fontSize, primaryColor, outlineColor, outlineWidth, posX, posY } = style;
   
-  // Alignment: 2=Bottom, 6=Top, 10=Middle (approx)
-  let alignment = 2;
-  if (position === 'top') alignment = 6;
-  if (position === 'middle') alignment = 10;
+  // Script resolution (1920x1080 is standard HD)
+  const resX = 1920;
+  const resY = 1080;
+  
+  // Calculate pixel position from percentage
+  const x = Math.round((posX / 100) * resX);
+  const y = Math.round((posY / 100) * resY);
 
-  const header = `[Script Info]
+  let ass = `[Script Info]
 ScriptType: v4.00+
-PlayResX: 1920
-PlayResY: 1080
+PlayResX: ${resX}
+PlayResY: ${resY}
+ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Montserrat,${fontSize * 2},${primaryColor},${primaryColor},${outlineColor},&H80000000,-1,0,0,0,100,100,0,0,1,${outlineWidth},0,${alignment},10,10,100,1
+Style: Default,Arial,${fontSize},&H${primaryColor},&H000000FF,&H${outlineColor},&H00000000,-1,0,0,0,100,100,0,0,1,${outlineWidth},0,2,10,10,10,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 `;
 
-  const events = segments.map(s => {
-    const start = formatAssTime(s.start);
-    const end = formatAssTime(s.end);
-    // Simple sanitization
-    const text = s.text.replace(/\n/g, ' ').trim();
-    return `Dialogue: 0,${start},${end},Default,,0,0,0,,${text}`;
-  }).join('\n');
+  segments.forEach(seg => {
+    const text = seg.text.replace(/"/g, '""');
+    // Using \pos(x,y) for absolute positioning from frontend
+    // \an2 = center-bottom alignment for the text block itself at that point
+    ass += `Dialogue: 0,${formatAssTime(seg.start)},${formatAssTime(seg.end)},Default,,0,0,0,,{\\an5\\pos(${x},${y})}${text}\n`;
+  });
 
-  return header + events;
+  return ass;
 }
 
 function formatAssTime(seconds) {
