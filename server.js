@@ -198,21 +198,19 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
   try {
     const fileBuffer = fs.readFileSync(req.file.path);
     const blob = new Blob([fileBuffer], { type: req.file.mimetype || 'audio/mpeg' });
-    
+
     const formData = new FormData();
     formData.append('input_file', blob, req.file.originalname);
     formData.append('action', 'start');
     
-    // Enable ALL audio enhancement algorithms
+    // Algorithms
     formData.append('denoise', 'true');
-    formData.append('denoisemethod', 'speech_isolation');   // Isolate voice, remove background
-    formData.append('denoiseamount', '12');        // Strong noise reduction
-    formData.append('leveler', 'true');            // Adaptive volume leveling
-    formData.append('levelerstrength', '80');       // Aggressive leveling
-    formData.append('filtering', 'true');          // High/low pass filtering
-    formData.append('loudnesstarget', '-16');       // Broadcast-standard loudness
-    
-    // Request MP3 output
+    formData.append('denoisemethod', 'speech_isolation');
+    formData.append('denoiseamount', '12');
+    formData.append('leveler', 'true');
+    formData.append('levelerstrength', '80');
+    formData.append('filtering', 'true');
+    formData.append('loudnesstarget', '-16');
     formData.append('output_files', JSON.stringify([{ format: 'mp3', bitrate: 192 }]));
 
     const auphonicRes = await fetch('https://auphonic.com/api/simple/productions.json', {
