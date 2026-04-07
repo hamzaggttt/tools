@@ -1,15 +1,18 @@
 require('dotenv').config();
 const express = require('express');
+const morgan = require('morgan');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const ffmpeg = require('fluent-ffmpeg');
-const ffmpegPath = require('ffmpeg-static');
+const ffmpegPath = process.env.NODE_ENV === 'production' ? 'ffmpeg' : require('ffmpeg-static');
 ffmpeg.setFfmpegPath(ffmpegPath);
+console.log(`Using FFmpeg path: ${ffmpegPath}`);
 
 const app = express();
+app.use(morgan('combined'));
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -20,6 +23,9 @@ app.use('/output', express.static(path.join(__dirname, 'output')));
 const upload = multer({ dest: 'uploads/' });
 
 const jobs = {};
+
+// Health Check for Railway
+app.get('/health', (req, res) => res.status(200).send('OK'));
 
 app.post('/api/process', upload.single('video'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No video provided' });
@@ -262,7 +268,7 @@ function pollAuphonicJob(jobId, uuid) {
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-  console.log(`(Connect your tunnel to port ${PORT} to go public)\n`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🚀 Server running on http://0.0.0.0:${PORT}`);
+  console.log(`(Environment: ${process.env.NODE_ENV || 'development'})\n`);
 });

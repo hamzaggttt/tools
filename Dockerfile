@@ -1,23 +1,29 @@
 # Use a Node.js base image
 FROM node:18-bullseye
 
-# Install FFmpeg and other dependencies
-RUN apt-get update && apt-get install -y ffmpeg libvpx-dev libx264-dev && rm -rf /var/lib/apt/lists/*
+# Set environment
+ENV NODE_ENV=production
+
+# Install FFmpeg
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
 # Create and change to the app directory
 WORKDIR /usr/src/app
 
-# Copy application dependency manifests to the container image.
+# Copy application dependency manifests
 COPY package*.json ./
 
-# Install dependencies.
-RUN npm install
+# Install production dependencies
+RUN npm install --omit=dev
 
-# Copy local code to the container image.
+# Copy local code
 COPY . .
 
-# Expose the port the app runs on
+# Create necessary directories with permissions
+RUN mkdir -p uploads output && chmod 777 uploads output
+
+# Expose port (Railway uses PORT env var but EXPOSE is good documentation)
 EXPOSE 3000
 
-# Run the web service on container startup.
+# Run the web service
 CMD [ "node", "server.js" ]
