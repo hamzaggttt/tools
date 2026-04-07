@@ -310,35 +310,47 @@ app.post('/api/burn-captions', async (req, res) => {
     fs.writeFileSync(assPath, assContent);
 
     // 2. FFmpeg Burn-in
-    // On Linux, we just use the relative path or absolute path as is.
-    // FFmpeg subtitles filter on Windows needs escaped backslashes and colons.
     let filterPath = assPath;
     if (process.platform === 'win32') {
       filterPath = assPath.replace(/\\/g, '/').replace(/:/g, '\\:');
     }
     
+    console.log(`[Burn-in] Starting for job ${exportJobId}`);
+    
     ffmpeg(inputPath)
-      .videoFilters(`subtitles='${filterPath}'`) // Added quotes for safety
+      .videoFilters(`subtitles='${filterPath}'`)
       .outputOptions([
         '-c:v libx264',
-        '-preset fast',
+        '-preset ultrafast', 
         '-crf 23',
-        '-c:a aac', // Convert to AAC to ensure audio track exists properly
-        '-map 0:v:0', // Specifically map first video
-        '-map 0:a:0?', // Map first audio if it exists
+        '-c:a aac',
+        '-map 0:v:0',
+        '-map 0:a:0?',
         '-movflags +faststart'
       ])
-      .on('progress', (p) => { jobs[exportJobId].progress = 10 + Math.floor((p.percent || 0) * 0.85); })
-      .on('end', () => {
-        jobs[exportJobId].status = 'completed';
-        jobs[exportJobId].progress = 100;
-        jobs[exportJobId].file = `/output/${exportJobId}.mp4`;
-        fs.unlink(assPath, () => {});
+      .on('start', (cmd) => {
+        console.log(`[Burn-in] Command: ${cmd}`);
+        jobs[exportJobId].progress = 10;
+        jobs[exportJobId].step = 'Encoding video...';
       })
-      .on('error', (err) => {
-        console.error('Burn-in Error:', err);
+      .on('progress', (p) => { 
+        const prg = 15 + Math.floor((p.percent || 0) * 0.8);
+        jobs[exportJobId].progress = Math.min(95, prg); 
+      })
+      .on('error', (err, stdout, stderr) => {
+        console.error(`[Burn-in] Error for job ${exportJobId}:`, err.message);
+        console.error(`[Burn-in] Stderr:`, stderr);
         jobs[exportJobId].status = 'error';
         jobs[exportJobId].error = err.message;
+        fs.unlink(assPath, () => {});
+      })
+      .on('end', () => {
+        console.log(`[Burn-in] Completed for job ${exportJobId}`);
+        jobs[exportJobId].status = 'completed';
+        jobs[exportJobId].progress = 100;
+        jobs[exportJobId].step = 'Finalizing...';
+        jobs[exportJobId].file = `/output/${exportJobId}.mp4`;
+        fs.unlink(assPath, () => {});
       })
       .save(outputPath);
 

@@ -620,11 +620,10 @@
         </div>
       </div>
 
-      <!-- Caption Editor -->
-      <div style="margin-top:2rem;">
-        <h3 style="font-family:'Syne';font-size:1rem;margin-bottom:1rem;">Edit Captions</h3>
-        <div id="cap-list" style="max-height:300px;overflow-y:auto;background:var(--surface3);border-radius:12px;border:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:8px;">
-          <!-- Segments populated here -->
+      <div id="cap-editor-stage" style="display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,0.05);">
+        <h3 style="font-size:0.9rem;font-weight:600;margin-bottom:1rem;color:var(--muted);">Edit Captions</h3>
+        <div id="cap-list" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;padding-right:8px;" class="custom-scroll">
+          <!-- Populated by JS -->
         </div>
       </div>
     </div>
