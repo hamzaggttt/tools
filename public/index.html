@@ -12,132 +12,106 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <style>
   :root {
-    --accent: #6366f1;
-    --accent-dark: #4f46e5;
-    --surface: #09090b;
-    --surface2: #18181b;
-    --surface3: #27272a;
-    --border: rgba(255,255,255,0.1);
-    --text: #fafafa;
-    --muted: #a1a1aa;
-    --glow: rgba(99, 102, 241, 0.15);
-  }
-  .light {
-    --accent: #4f46e5;
-    --accent-dark: #4338ca;
-    --surface: #fafafa;
-    --surface2: #ffffff;
-    --surface3: #f4f4f5;
-    --border: rgba(0,0,0,0.1);
-    --text: #09090b;
-    --muted: #71717a;
-    --glow: rgba(79, 70, 229, 0.1);
+    --accent: #a855f7; /* Purple */
+    --accent-dark: #7e22ce;
+    --surface: #000000;
+    --surface2: #0f172a;
+    --surface3: #1e293b;
+    --border: rgba(255,255,255,0.06);
+    --text: #ffffff;
+    --muted: rgba(255,255,255,0.5);
+    --glow: rgba(168, 85, 247, 0.2);
   }
   * { box-sizing: border-box; }
   body {
     font-family: 'DM Sans', sans-serif;
     background: var(--surface);
     color: var(--text);
-    transition: background 0.3s, color 0.3s;
     min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+  /* Mesh Background Pattern */
+  body::before {
+    content: '';
+    position: absolute; top:0; left:0; right:0; height:1000px;
+    background: 
+      radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 10%, rgba(59, 130, 246, 0.15) 0%, transparent 50%);
+    background-size: 100% 100%;
+    z-index: -2;
+  }
+  body::after {
+    content: '';
+    position: absolute; top:0; left:0; right:0; bottom:0;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 50px 50px;
+    opacity: 0.1;
+    z-index: -1;
+    pointer-events: none;
   }
   h1,h2,h3,h4 { font-family: 'Syne', sans-serif; }
   .card {
-    background: var(--surface2);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+    border-radius: 20px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
   }
-  .card::before {
-    content: '';
-    position: absolute; top:0; left:0; right:0; height:1px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    opacity: 0; transition: opacity 0.3s;
-  }
   .card:hover { 
-    border-color: rgba(255,255,255,0.15); 
+    border-color: rgba(168, 85, 247, 0.3); 
     box-shadow: 0 10px 40px var(--glow);
-    transform: translateY(-2px);
+    transform: translateY(-4px);
   }
-  .card:hover::before { opacity: 1; }
-  .dropzone {
-    border: 1.5px dashed var(--border);
-    border-radius: 12px;
-    background: var(--surface3);
-    transition: all 0.2s;
-    cursor: pointer;
-  }
-  .dropzone.dragover, .dropzone:hover { border-color: var(--accent); background: var(--glow); }
   .btn-accent {
-    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-    color: #fff;
-    box-shadow: 0 4px 12px var(--glow);
+    background: #ffffff;
+    color: #000000;
     font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    border-radius: 8px;
-    padding: 0.6rem 1.4rem;
+    font-weight: 800;
+    border-radius: 50px;
+    padding: 0.8rem 1.8rem;
     border: none;
     cursor: pointer;
-    transition: background 0.15s, transform 0.1s;
-    font-size: 0.85rem;
-    letter-spacing: 0.02em;
-    display: inline-flex; align-items: center; gap: 6px;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    display: inline-flex; align-items: center; gap: 8px;
   }
-  .btn-accent:hover { background: var(--accent-dark); transform: translateY(-1px); }
-  .btn-accent:active { transform: scale(0.97); }
-  .btn-accent:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-accent:hover { background: #e2e8f0; transform: translateY(-1px); }
   .btn-ghost {
     background: transparent;
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.55rem 1.2rem;
+    color: #ffffff;
+    border: 1.5px solid var(--border);
+    border-radius: 50px;
+    padding: 0.8rem 1.8rem;
     cursor: pointer;
-    font-size: 0.82rem;
-    transition: border-color 0.15s, background 0.15s;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
     font-family: 'DM Sans', sans-serif;
   }
-  .btn-ghost:hover { border-color: var(--accent); background: var(--glow); }
-  .badge {
-    display: inline-flex; align-items: center;
-    background: var(--glow);
-    color: var(--accent);
-    border: 1px solid rgba(99, 102, 241, 0.2);
-    border-radius: 6px;
-    font-size: 0.7rem;
+  .btn-ghost:hover { border-color: #ffffff; background: rgba(255,255,255,0.05); }
+
+  .hero-badge {
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    color: #a855f7;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
     font-weight: 600;
-    font-family: 'Syne', sans-serif;
-    padding: 2px 8px;
-    letter-spacing: 0.04em;
+    display: inline-flex; align-items: center; gap: 8px;
   }
-  .light .badge { color: var(--accent-dark); background: rgba(79, 70, 229, 0.1); border-color: rgba(79, 70, 229, 0.2); }
-  .progress-track { background: var(--surface3); border-radius: 999px; height: 6px; overflow: hidden; }
-  .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s ease; }
-  .nav-link {
-    color: var(--muted); font-size: 0.82rem; font-weight: 500;
-    transition: color 0.15s; cursor: pointer; text-decoration: none; white-space: nowrap;
-  }
-  .nav-link:hover, .nav-link.active { color: var(--text); }
-  .toggle {
-    width: 42px; height: 23px; background: var(--surface3);
-    border-radius: 999px; position: relative; cursor: pointer;
-    border: 1px solid var(--border); transition: background 0.2s; flex-shrink: 0;
-  }
-  .toggle.on { background: var(--accent); border-color: var(--accent); }
-  .toggle::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
-    width: 17px; height: 17px; background: #fff;
-    border-radius: 50%; transition: transform 0.2s;
-  }
-  .toggle.on::after { transform: translateX(19px); }
-  .preview-split { display: flex; gap: 12px; }
-  .preview-split > div { flex: 1; min-width: 0; }
-  .preview-img {
-    width: 100%; border-radius: 10px; object-fit: contain; max-height: 260px;
-    background: repeating-conic-gradient(#88888820 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
+  .hero-title {
+    font-size: clamp(3rem, 7vw, 5rem);
+    background: linear-gradient(to bottom, #ffffff 50%, rgba(255,255,255,0.5));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -2px;
+    line-height: 0.95;
+    margin: 1.5rem 0;
   }
   .img-wrap { position: relative; overflow: hidden; border-radius: 10px; }
   .img-overlay {
@@ -214,47 +188,84 @@
 <body id="app">
 
 <!-- HEADER -->
-<header style="position:sticky;top:0;z-index:50;background:var(--surface);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);">
-  <div style="max-width:1100px;margin:0 auto;padding:0 1.5rem;height:58px;display:flex;align-items:center;gap:2rem;">
-    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <div style="width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <rect x="2" y="2" width="5" height="5" rx="1" fill="#111"/>
-          <rect x="9" y="2" width="5" height="5" rx="1" fill="#111" opacity=".7"/>
-          <rect x="2" y="9" width="5" height="5" rx="1" fill="#111" opacity=".5"/>
-          <rect x="9" y="9" width="5" height="5" rx="1" fill="#111" opacity=".3"/>
-        </svg>
+<header style="position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(0,0,0,0.5);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);">
+  <div style="max-width:1100px;margin:0 auto;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:2rem;">
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+      <div style="width:28px;height:28px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
       </div>
-      <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;letter-spacing:-0.02em;">Media<span style="color:var(--accent);">Tools</span></span>
+      <span style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-0.02em;">Media<span style="color:var(--accent);">Tools</span></span>
     </div>
-    <nav style="display:flex;gap:1.5rem;flex:1;overflow-x:auto;">
-      <a class="nav-link active" href="#bg-remover" onclick="smoothScroll('bg-remover');return false;">Background Remover</a>
+    <nav style="display:flex;gap:1.5rem;flex:1;overflow-x:auto;justify-content:center;">
+      <a class="nav-link" href="#bg-remover" onclick="smoothScroll('bg-remover');return false;">Background Remover</a>
       <a class="nav-link" href="#video-conv" onclick="smoothScroll('video-conv');return false;">Video Converter</a>
       <a class="nav-link" href="#img-conv" onclick="smoothScroll('img-conv');return false;">Image Converter</a>
       <a class="nav-link" href="#ai-video" onclick="smoothScroll('ai-video');return false;">AI Video Editor</a>
       <a class="nav-link" href="#auphonic" onclick="smoothScroll('auphonic');return false;">Auphonic Audio</a>
-      <a class="nav-link" href="#thumb-gen" onclick="smoothScroll('thumb-gen');return false;">Thumbnail Gen</a>
     </nav>
-    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      <div class="toggle" id="themeToggle" onclick="toggleTheme()"></div>
+    <div style="flex-shrink:0;">
+      <button class="btn-ghost" style="padding:0.55rem 1.4rem;font-size:0.85rem;" onclick="smoothScroll('bg-remover')">Join Waitlist</button>
     </div>
   </div>
 </header>
 
 <!-- HERO -->
-<section style="max-width:1100px;margin:0 auto;padding:4rem 1.5rem 2rem;">
-  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
-    <span class="badge">All-in-one · Free</span>
-    <span style="color:var(--muted);font-size:0.8rem;">No sign-up required. Conversion runs in your browser.</span>
+<section style="max-width:1100px;margin:0 auto;padding:12rem 1.5rem 6rem;position:relative;text-align:center;">
+  <div class="hero-badge" style="margin-bottom:2rem;">
+    <span style="background:var(--accent);color:#fff;padding:2px 6px;border-radius:4px;font-size:0.6rem;text-transform:uppercase;">New</span>
+    Download the new iOS app →
   </div>
-  <div style="position:absolute;top:-10%;left:50%;width:800px;height:400px;background:var(--accent);filter:blur(150px);opacity:0.15;border-radius:50%;transform:translate(-50%,0);z-index:-1;pointer-events:none;"></div>
-  <h1 style="font-size:clamp(2.5rem,6vw,4.5rem);font-weight:800;line-height:1.05;letter-spacing:-0.04em;margin:0.75rem 0 0.5rem;position:relative;">
-    Edit media.<br/><span style="background:linear-gradient(to right, var(--accent), #a855f7);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Instantly.</span>
-  </h1>
-  <p style="color:var(--muted);font-size:1rem;max-width:480px;line-height:1.7;margin:0;">
-    Remove backgrounds, convert videos and images — right in your browser. Video and image conversion never leaves your device.
-  </p>
+  
+  <div style="max-width:800px;margin:0 auto;">
+    <h1 class="hero-title">
+      How AI is Redefining<br/>Media Success.
+    </h1>
+    <p style="color:var(--muted);font-size:1.1rem;max-width:600px;line-height:1.6;margin:0 auto 3rem;">
+      Harness the power of AI to optimize every facet of your media workflow. Our suite of tools is designed to help you scale your impact instantly.
+    </p>
+    
+    <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;margin-bottom:6rem;">
+      <button class="btn-accent" onclick="smoothScroll('bg-remover')">Start for Free</button>
+      <button class="btn-ghost" onclick="smoothScroll('video-conv')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:6px;"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        See how it works
+      </button>
+    </div>
+
+    <!-- Stats & Floating Components -->
+    <div style="display:flex;justify-content:center;gap:4rem;margin-bottom:8rem;position:relative;">
+      <div style="text-align:left;">
+        <div style="font-size:2.5rem;font-weight:800;font-family:'Syne';line-height:1;">4.9+</div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Starts rating</div>
+      </div>
+      <div style="text-align:left;">
+        <div style="font-size:2.5rem;font-weight:800;font-family:'Syne';line-height:1;">20k+</div>
+        <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Satisfied customer</div>
+      </div>
+      
+      <!-- BEST AI TOOLS CARD -->
+      <div class="card" style="position:absolute;right:-100px;top:-40px;width:240px;padding:1.5rem;text-align:left;display:none;@media(min-width:1100px){display:block;}">
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:36px;height:36px;background:rgba(255,184,0,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffb800" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <div>
+            <div style="font-size:0.75rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Best AI Tools</div>
+            <div style="font-size:0.65rem;color:var(--muted);line-height:1.2;">Harness the power of AI to optimize every facet of your media.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logo Ticker -->
+  <div style="display:flex;justify-content:center;gap:4rem;align-items:center;opacity:0.3;filter:grayscale(1);flex-wrap:wrap;padding-top:4rem;border-top:1px solid var(--border);">
+    <span style="font-size:1.2rem;font-weight:700;font-family:'Syne';">Linear</span>
+    <span style="font-size:1.2rem;font-weight:700;font-family:'Syne';">Medium</span>
+    <span style="font-size:1.2rem;font-weight:700;font-family:'Syne';">Mailchimp</span>
+    <span style="font-size:1.2rem;font-weight:700;font-family:'Syne';">Square</span>
+    <span style="font-size:1.2rem;font-weight:700;font-family:'Syne';">Dropbox</span>
+  </div>
 </section>
 
 <main style="max-width:1100px;margin:0 auto;padding:0 1.5rem 6rem;display:flex;flex-direction:column;gap:2.5rem;">
