@@ -225,7 +225,8 @@ app.post('/api/transcribe', upload.single('video'), async (req, res) => {
     const transcript = await aaiClient.transcripts.transcribe({
       audio: audioPath,
       punctuate: true,
-      format_text: true
+      format_text: true,
+      speech_models: ["universal-3-pro", "universal-2"]
     });
 
     if (transcript.status === 'error') {
