@@ -235,11 +235,37 @@ app.post('/api/transcribe', upload.single('video'), async (req, res) => {
     }
 
     const data = await groqRes.json();
+    console.log(`[Transcription] Received data for job ${jobId}`);
+
+    // Normalize transcription data
+    if (!data.segments || data.segments.length === 0) {
+      if (data.words && data.words.length > 0) {
+        // Fallback: Group words into segments if segments are missing
+        console.log(`[Transcription] Segments missing, reconstructing from words...`);
+        data.segments = [];
+        let currentSeg = { start: data.words[0].start, end: data.words[0].end, text: "" };
+        data.words.forEach((w, i) => {
+          currentSeg.text += (currentSeg.text ? " " : "") + w.word;
+          currentSeg.end = w.end;
+          // Every 10 words or 3 seconds, start a new segment
+          if ((i + 1) % 10 === 0 || (w.end - currentSeg.start) > 3) {
+            data.segments.push(currentSeg);
+            if (data.words[i+1]) {
+              currentSeg = { start: data.words[i+1].start, end: data.words[i+1].end, text: "" };
+            }
+          }
+        });
+        if (currentSeg.text && !data.segments.includes(currentSeg)) data.segments.push(currentSeg);
+      } else if (data.text) {
+        // Ultimate fallback: Just one big segment
+        data.segments = [{ start: 0, end: data.duration || 60, text: data.text }];
+      }
+    }
     
     // 3. Store Result
     const videoFileName = `${jobId}${path.extname(req.file.originalname) || '.mp4'}`;
     const preservedPath = path.join('output', videoFileName);
-    fs.renameSync(inputPath, preservedPath); // Move to output for later burn-in
+    fs.renameSync(inputPath, preservedPath); 
 
     jobs[jobId].status = 'completed';
     jobs[jobId].progress = 100;
@@ -247,7 +273,6 @@ app.post('/api/transcribe', upload.single('video'), async (req, res) => {
     jobs[jobId].transcription = data;
     jobs[jobId].file = `/output/${videoFileName}`;
     
-    // Cleanup audio only
     fs.unlink(audioPath, () => {});
 
   } catch (err) {
@@ -278,16 +303,22 @@ app.post('/api/burn-captions', async (req, res) => {
     fs.writeFileSync(assPath, assContent);
 
     // 2. FFmpeg Burn-in
-    // Note: FFmpeg subtitles filter needs path with escaped backslashes on Windows
-    const escapedAssPath = assPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+    // On Linux, we just use the relative path or absolute path as is.
+    // FFmpeg subtitles filter on Windows needs escaped backslashes and colons.
+    let filterPath = assPath;
+    if (process.platform === 'win32') {
+      filterPath = assPath.replace(/\\/g, '/').replace(/:/g, '\\:');
+    }
     
     ffmpeg(inputPath)
-      .videoFilters(`subtitles=${escapedAssPath}`)
+      .videoFilters(`subtitles='${filterPath}'`) // Added quotes for safety
       .outputOptions([
         '-c:v libx264',
         '-preset fast',
         '-crf 23',
-        '-c:a copy', // Keep original audio
+        '-c:a aac', // Convert to AAC to ensure audio track exists properly
+        '-map 0:v:0', // Specifically map first video
+        '-map 0:a:0?', // Map first audio if it exists
         '-movflags +faststart'
       ])
       .on('progress', (p) => { jobs[exportJobId].progress = 10 + Math.floor((p.percent || 0) * 0.85); })
