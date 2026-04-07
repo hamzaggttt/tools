@@ -1680,6 +1680,7 @@ async function thGenerateImage() {
 let capSegments = [];
 let capWords = [];
 let capOriginalFile = null;
+let capOriginalFileServer = null; // Defined globally
 let capStyle = {
   fontSize: 32,
   primaryColor: '#ffffff',
@@ -1697,6 +1698,8 @@ async function handleCapFile(file) {
   // 1. Show Loading
   document.getElementById('cap-upload-stage').style.display = 'none';
   document.getElementById('cap-loading').style.display = 'block';
+  document.getElementById('cap-loading-step').textContent = 'Uploading video...';
+  document.getElementById('cap-fill').style.width = '0%';
   
   // Preview the video locally immediately
   const videoUrl = URL.createObjectURL(file);
@@ -1708,36 +1711,46 @@ async function handleCapFile(file) {
     const fd = new FormData();
     fd.append('video', file);
     const res = await fetch('/api/transcribe', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('Upload failed');
     const { jobId } = await res.json();
     
     // 3. Poll Status
     const poll = setInterval(async () => {
-      const sres = await fetch(`/api/status/${jobId}`);
-      const job = await sres.json();
-      
-      document.getElementById('cap-loading-step').textContent = job.step || 'Processing...';
-      document.getElementById('cap-fill').style.width = (job.progress || 0) + '%';
-      
-      if (job.status === 'completed') {
-        clearInterval(poll);
-        capSegments = job.transcription.segments;
-        capWords = job.transcription.words || [];
-        renderCapEditor();
-        updateCapStyle();
+      try {
+        const sres = await fetch(`/api/status/${jobId}`);
+        if (!sres.ok) return;
+        const job = await sres.json();
         
-        document.getElementById('cap-loading').style.display = 'none';
-        document.getElementById('cap-editor-stage').style.display = 'block';
+        document.getElementById('cap-loading-step').textContent = job.step || 'Processing...';
+        document.getElementById('cap-fill').style.width = (job.progress || 0) + '%';
         
-        // Final video path for burn-in (relative to public)
-        capOriginalFileServer = job.file; 
-      } else if (job.status === 'error') {
-        clearInterval(poll);
-        showToast('Transcription failed: ' + job.error);
-        resetCapVideo();
+        if (job.status === 'completed') {
+          clearInterval(poll);
+          console.log('Transcription received:', job.transcription);
+          
+          capSegments = job.transcription.segments || [];
+          capWords = job.transcription.words || [];
+          capOriginalFileServer = job.file; 
+          
+          renderCapEditor();
+          updateCapStyle();
+          
+          setTimeout(() => {
+            document.getElementById('cap-loading').style.display = 'none';
+            document.getElementById('cap-editor-stage').style.display = 'block';
+            showToast('Transcription ready!', 'success');
+          }, 500);
+        } else if (job.status === 'error') {
+          clearInterval(poll);
+          showToast('Transcription failed: ' + job.error);
+          resetCapVideo();
+        }
+      } catch (pollErr) {
+        console.error('Polling error:', pollErr);
       }
     }, 1500);
   } catch (err) {
-    showToast('Network error');
+    showToast('Failed to start transcription');
     resetCapVideo();
   }
 }

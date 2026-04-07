@@ -237,20 +237,24 @@ app.post('/api/transcribe', upload.single('video'), async (req, res) => {
     const data = await groqRes.json();
     
     // 3. Store Result
+    const videoFileName = `${jobId}${path.extname(req.file.originalname) || '.mp4'}`;
+    const preservedPath = path.join('output', videoFileName);
+    fs.renameSync(inputPath, preservedPath); // Move to output for later burn-in
+
     jobs[jobId].status = 'completed';
     jobs[jobId].progress = 100;
     jobs[jobId].step = 'Transcription complete!';
-    jobs[jobId].transcription = data; // Includes 'words' array with start/end
+    jobs[jobId].transcription = data;
+    jobs[jobId].file = `/output/${videoFileName}`;
     
-    // Cleanup
-    fs.unlink(inputPath, () => {});
+    // Cleanup audio only
     fs.unlink(audioPath, () => {});
 
   } catch (err) {
     console.error('Transcription Error:', err);
     jobs[jobId].status = 'error';
     jobs[jobId].error = err.message;
-    fs.unlink(inputPath, () => {});
+    if (fs.existsSync(req.file.path)) fs.unlink(req.file.path, () => {});
     if (fs.existsSync(audioPath)) fs.unlink(audioPath, () => {});
   }
 });
