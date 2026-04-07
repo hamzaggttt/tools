@@ -103,6 +103,13 @@ const AUPHONIC_KEY = process.env.AUPHONIC_KEY;
 const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
+// Log key status on startup
+console.log('--- Environment Check ---');
+console.log('AUPHONIC_KEY:', AUPHONIC_KEY ? 'Present ✅' : 'MISSING ❌');
+console.log('REMOVE_BG_API_KEY:', REMOVE_BG_API_KEY ? 'Present ✅' : 'MISSING ❌');
+console.log('GROQ_API_KEY:', GROQ_API_KEY ? 'Present ✅' : 'MISSING ❌');
+console.log('-------------------------');
+
 // PROXY: REMOVE.BG
 app.post('/api/remove-bg', upload.single('image_file'), async (req, res) => {
   try {
@@ -121,8 +128,17 @@ app.post('/api/remove-bg', upload.single('image_file'), async (req, res) => {
     });
 
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err?.errors?.[0]?.title || 'API Error');
+      const errorTxt = await response.text().catch(() => 'No error text');
+      console.error(`❌ RemoveBG API error: status=${response.status} body=${errorTxt}`);
+      
+      let errMsg = 'API Error';
+      try {
+        const errObj = JSON.parse(errorTxt);
+        errMsg = errObj?.errors?.[0]?.title || errorTxt || errMsg;
+      } catch(e) {
+        errMsg = errorTxt || errMsg;
+      }
+      throw new Error(errMsg);
     }
 
     const resultBlob = await response.blob();
