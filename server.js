@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
+const FormData = require('form-data');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
@@ -114,17 +115,18 @@ console.log('-------------------------');
 app.post('/api/remove-bg', upload.single('image_file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No image provided' });
-    const fileBuffer = fs.readFileSync(req.file.path);
-    const blob = new Blob([fileBuffer], { type: req.file.mimetype });
 
-    const formData = new FormData();
-    formData.append('image_file', blob, req.file.originalname);
-    formData.append('size', 'auto');
+    const form = new FormData();
+    form.append('image_file', fs.createReadStream(req.file.path));
+    form.append('size', 'auto');
 
     const response = await fetch('https://api.remove.bg/v1.0/removebg', {
       method: 'POST',
-      headers: { 'X-Api-Key': REMOVE_BG_API_KEY },
-      body: formData
+      headers: { 
+        'X-Api-Key': REMOVE_BG_API_KEY,
+        ...form.getHeaders()
+      },
+      body: form
     });
 
     if (!response.ok) {
