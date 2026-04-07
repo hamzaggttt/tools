@@ -261,4 +261,24 @@ function pollAuphonicJob(jobId, uuid) {
   }, 5000); // Check every 5s
 }
 
-app.listen(3000, () => console.log('Video Processing Backend running on http://localhost:3000'));
+const localtunnel = require('localtunnel');
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, async () => {
+  console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+  
+  try {
+    const tunnel = await localtunnel({ 
+      port: PORT,
+      subdomain: 'mediatools-app-' + Math.floor(Math.random() * 100) 
+    });
+    console.log(`\n🌍 PUBLIC ACCESS: ${tunnel.url}`);
+    console.log(`\n(Keep this window open to stay online)\n`);
+
+    tunnel.on('close', () => {
+      console.log('Tunnel closed');
+    });
+  } catch (err) {
+    console.error('Localtunnel Error:', err);
+  }
+});
