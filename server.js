@@ -101,7 +101,7 @@ app.get('/api/status/:id', (req, res) => {
 
 // API KEYS (LOADED FROM .ENV)
 const AUPHONIC_KEY = process.env.AUPHONIC_KEY;
-const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY;
+const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY || process.env['bg remover'];
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // Log key status on startup
