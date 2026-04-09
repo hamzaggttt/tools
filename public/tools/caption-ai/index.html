@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Caption AI — MediaTools</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* Caption AI Specific Styles */
+    .caption-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 2rem;
+      height: calc(100vh - 120px);
+      margin-top: 1rem;
+    }
+
+    .video-preview-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: var(--accents-1);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      border-radius: 8px;
+      background: #000;
+      max-height: 400px;
+      object-fit: contain;
+    }
+
+    .timeline-container {
+      flex: 1;
+      overflow-y: auto;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      position: relative;
+    }
+
+    .segment-item {
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--accents-2);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .segment-item:hover {
+      background: var(--accents-1);
+    }
+
+    .segment-item.active {
+      background: var(--accents-2);
+      border-left: 3px solid var(--blue);
+    }
+
+    .segment-time {
+      font-size: 0.75rem;
+      color: var(--accents-4);
+      margin-bottom: 0.25rem;
+    }
+
+    .segment-text-input {
+      background: transparent;
+      border: none;
+      color: var(--fg);
+      width: 100%;
+      font-size: 0.875rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .sidebar-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .style-card {
+      background: var(--accents-1);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+
+    .style-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .style-row label {
+      font-size: 0.75rem;
+      color: var(--accents-5);
+    }
+
+    input[type="color"], input[type="range"], select {
+      background: var(--accents-2);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: 4px;
+      padding: 2px;
+    }
+
+    .progress-bar-wrapper {
+      height: 4px;
+      background: var(--accents-2);
+      border-radius: 2px;
+      margin-top: 1rem;
+      overflow: hidden;
+      display: none;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--blue);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    #drop-screen {
+      position: absolute;
+      inset: 1.5rem;
+      border: 2px dashed var(--accents-2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      background: var(--accents-1);
+      z-index: 10;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <div class="logo"><a href="/">MediaTools</a></div>
+      <div class="nav-links">
+        <a href="/tools/bg-remover/">BG Remover</a>
+        <a href="/tools/video-converter/">Video Conv</a>
+        <a href="/tools/image-converter/">Image Conv</a>
+        <a href="/tools/caption-ai/" class="active">Caption AI</a>
+        <a href="/tools/auphonic-enhancer/">Audio</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="caption-grid">
+      <!-- MAIN WORKSPACE -->
+      <div class="video-preview-pane">
+        <div id="drop-screen" onclick="document.getElementById('video-input').click()">
+          <input type="file" id="video-input" accept="video/mp4,video/quicktime" hidden />
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accents-4)" stroke-width="1.5" style="margin-bottom: 1rem;"><rect x="1" y="5" width="22" height="14" rx="7" ry="7"/><circle cx="12" cy="12" r="3"/><polyline points="23 7 16 12 23 17 23 7"/></svg>
+          <p>Click or drag to upload video</p>
+          <p style="font-size: 0.75rem; color: var(--accents-4); margin-top: 0.5rem;">MP4, MOV supported</p>
+        </div>
+
+        <video id="video-player" controls style="display: none;"></video>
+        
+        <div class="timeline-container" id="timeline">
+          <p id="timeline-placeholder" style="text-align: center; color: var(--accents-3); margin-top: 4rem;">Transcription will appear here...</p>
+        </div>
+
+        <div class="progress-bar-wrapper" id="prog-wrap">
+          <div class="progress-bar-fill" id="prog-fill"></div>
+        </div>
+        <div id="status-text" style="font-size: 0.75rem; color: var(--accents-5); text-align: center;"></div>
+      </div>
+
+      <!-- SIDEBAR -->
+      <div class="sidebar-pane">
+        <div class="style-card">
+          <h4 style="margin-bottom: 1rem; font-size: 0.875rem;">Export Style</h4>
+          <div class="style-row">
+            <label>Font Size</label>
+            <input type="range" id="size" min="20" max="120" value="72" />
+          </div>
+          <div class="style-row">
+            <label>Color</label>
+            <input type="color" id="primaryColor" value="#ffffff" />
+          </div>
+          <div class="style-row">
+            <label>Outline</label>
+            <input type="color" id="outlineColor" value="#000000" />
+          </div>
+          <div class="style-row">
+            <label>Position Y</label>
+            <input type="range" id="posY" min="0" max="100" value="80" />
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="transcribe-btn" disabled style="width: 100%;">Start AI Transcription</button>
+        <button class="btn btn-secondary" id="export-btn" disabled style="width: 100%;">Burn & Export Video</button>
+        
+        <div id="export-result" style="display: none; margin-top: 1rem;">
+           <a id="download-link" href="#" download class="btn btn-primary" style="width: 100%; background: #0070f3;">↓ Download Result</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

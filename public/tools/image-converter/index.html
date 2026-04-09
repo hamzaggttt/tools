@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Converter — MediaTools</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <div class="logo"><a href="/">MediaTools</a></div>
+      <div class="nav-links">
+        <a href="/tools/bg-remover/">BG Remover</a>
+        <a href="/tools/video-converter/">Video Conv</a>
+        <a href="/tools/image-converter/" class="active">Image Conv</a>
+        <a href="/tools/caption-ai/">Caption AI</a>
+        <a href="/tools/auphonic-enhancer/">Audio</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container" style="padding: 4rem 2rem;">
+    <section style="max-width: 800px; margin: 0 auto;">
+      <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Image Converter</h1>
+      <p style="margin-bottom: 3rem;">Convert between JPG, PNG, and WEBP instantly in your browser.</p>
+
+      <div class="card" id="dropzone" style="min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-style: dashed; cursor: pointer;">
+        <input id="imgFileInput" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accents-4)" stroke-width="1.5" style="margin-bottom: 1.5rem;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <p style="font-size: 1rem; color: var(--fg); margin-bottom: 0.25rem;">Drag & drop image or click to upload</p>
+        <p style="font-size: 0.875rem;">JPG, PNG, WEBP · Max 20 MB</p>
+      </div>
+
+      <div id="imgOptions" style="display: none; margin-top: 2rem;">
+        <div class="card" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+          <img id="previewThumb" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border);" />
+          <div style="flex: 1;">
+            <p id="imgFileName" style="font-weight: 600; font-size: 0.875rem; color: var(--fg);"></p>
+            <p id="imgFileSize" style="font-size: 0.75rem; color: var(--accents-5);"></p>
+          </div>
+          <button class="btn btn-ghost" id="resetBtn">✕</button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 0.875rem; color: var(--accents-5);">Format:</span>
+            <select id="imgFormat" style="padding: 0.4rem 0.8rem;">
+              <option value="image/jpeg">JPG</option>
+              <option value="image/png">PNG</option>
+              <option value="image/webp">WEBP</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 200px;">
+            <span style="font-size: 0.875rem; color: var(--accents-5);">Quality:</span>
+            <input type="range" id="imgQuality" min="10" max="100" value="92" style="flex: 1;" />
+            <span id="qualityVal" style="font-size: 0.875rem; color: var(--fg); min-width: 35px;">92%</span>
+          </div>
+          <button class="btn btn-primary" id="convertBtn">Convert Image</button>
+        </div>
+      </div>
+
+      <div id="imgResult" style="display: none; margin-top: 3rem;">
+         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+            <div>
+              <p style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--accents-5); margin-bottom: 1rem;">Original</p>
+              <img id="resOrigImg" style="width: 100%; border-radius: 8px; border: 1px solid var(--border);" />
+            </div>
+            <div>
+              <p style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--accents-5); margin-bottom: 1rem;">Result</p>
+              <img id="resConvImg" style="width: 100%; border-radius: 8px; border: 1px solid var(--border);" />
+            </div>
+         </div>
+         <div style="display: flex; justify-content: space-between; align-items: center;">
+            <p id="resInfo" style="font-size: 0.875rem; color: var(--accents-5);"></p>
+            <button class="btn btn-primary" id="downloadBtn">Download Result</button>
+         </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
