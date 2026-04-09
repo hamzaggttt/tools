@@ -7,7 +7,7 @@ const fileInput = document.getElementById('auFileInput');
 const auInfo = document.getElementById('auInfo');
 const auFileName = document.getElementById('auFileName');
 const auFileSize = document.getElementById('auFileSize');
-const processBtn = document.getElementById('processBtn');
+const processBtn = document.getElementById('au-process'); // FIXED: Matches ID in index.html
 const resetBtn = document.getElementById('resetBtn');
 const auProgress = document.getElementById('auProgress');
 const progressFill = document.getElementById('progressFill');
@@ -34,6 +34,7 @@ function handleFile(file) {
   auInfo.style.display = 'block';
   dropzone.style.display = 'none';
   auResult.style.display = 'none';
+  processBtn.disabled = false; // FIXED: Enable button after file selection
 }
 
 processBtn.onclick = async () => {
@@ -77,6 +78,7 @@ async function pollStatus(jobId) {
 
       if (job.status === 'completed') {
         clearInterval(intv);
+        // Important: check if the resultUrl is relative or absolute
         downloadBtn.href = job.resultUrl;
         auResult.style.display = 'block';
         processBtn.disabled = false;
