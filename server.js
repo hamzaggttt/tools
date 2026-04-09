@@ -452,7 +452,7 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
     const auphonicRes = await fetch('https://auphonic.com/api/simple/productions.json', {
       method: 'POST',
       headers: { 
-        'Authorization': `Token ${AUPHONIC_KEY}`, // Using Token instead of Bearer
+        'Authorization': `Bearer ${AUPHONIC_KEY}`, // Corrected back to Bearer
         ...form.getHeaders()
       },
       body: form
