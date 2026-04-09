@@ -408,12 +408,13 @@ function formatAssTime(seconds) {
 const FormDataNode = require('form-data');
 app.post('/api/auphonic', upload.single('media'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No media provided' });
+  
   const jobId = uuidv4();
   jobs[jobId] = { status: 'processing', progress: 5, step: 'Uploading to Auphonic...' };
-  
   res.json({ jobId });
 
   try {
+    const tone = req.body.tone || 'natural';
     const fileStream = fs.createReadStream(req.file.path);
     const form = new FormDataNode();
     
@@ -424,13 +425,25 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
     });
     
     form.append('action', 'start');
-    form.append('denoise', 'true');
-    form.append('denoisemethod', 'speech_isolation');
-    form.append('denoiseamount', '12');
-    form.append('leveler', 'true');
-    form.append('levelerstrength', '80');
+    
+    // Algorithm customization based on Tone
+    if (tone === 'hard') {
+      form.append('denoise', 'true');
+      form.append('denoisemethod', 'speech_isolation');
+      form.append('denoiseamount', '15'); // Max isolation
+      form.append('leveler', 'true');
+      form.append('levelerstrength', '95'); // Radio-style compression
+      form.append('loudnesstarget', '-14'); // Louder profile
+    } else {
+      form.append('denoise', 'true');
+      form.append('denoisemethod', 'speech_isolation');
+      form.append('denoiseamount', '10');
+      form.append('leveler', 'true');
+      form.append('levelerstrength', '70');
+      form.append('loudnesstarget', '-16');
+    }
+    
     form.append('filtering', 'true');
-    form.append('loudnesstarget', '-16');
 
     // Specify output format dynamically or default to mp3
     const outputFormat = req.file.originalname.endsWith('.mp3') ? 'mp3' : 'mp4';
@@ -439,7 +452,7 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
     const auphonicRes = await fetch('https://auphonic.com/api/simple/productions.json', {
       method: 'POST',
       headers: { 
-        'Authorization': `Bearer ${AUPHONIC_KEY}`,
+        'Authorization': `Token ${AUPHONIC_KEY}`, // Using Token instead of Bearer
         ...form.getHeaders()
       },
       body: form
@@ -457,15 +470,6 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
     const uuid = data.data && data.data.uuid;
     
     if (!uuid) throw new Error('No UUID returned from Auphonic');
-
-    // Log the algorithms status
-    if (data.data) {
-      console.log('Algorithms applied:', {
-        denoise: data.data.algorithms?.denoise,
-        leveler: data.data.algorithms?.leveler,
-        filtering: data.data.algorithms?.filtering
-      });
-    }
 
     jobs[jobId].auphonicUuid = uuid;
     jobs[jobId].step = 'Processing on Auphonic servers...';

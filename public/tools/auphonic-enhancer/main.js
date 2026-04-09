@@ -44,8 +44,10 @@ processBtn.onclick = async () => {
   progressFill.style.width = '5%';
   progressLabel.textContent = 'Uploading to enhancement engine...';
   
+  const tone = document.getElementById('au-tone').value;
   const formData = new FormData();
   formData.append('media', selectedFile);
+  formData.append('tone', tone);
 
   try {
     const res = await fetch('/api/auphonic', {

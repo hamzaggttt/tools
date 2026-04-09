@@ -44,7 +44,16 @@
           <button class="btn btn-ghost" id="resetBtn">✕</button>
         </div>
 
-        <button class="btn btn-primary" id="processBtn" style="width: 100%;">Start Auphonic Processing</button>
+        <div id="tone-section" style="margin-bottom: 1.5rem;">
+      <label style="font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 0.5rem;">Processing Tone:</label>
+      <select id="au-tone" style="width: 100%; padding: 0.6rem; background: var(--accents-1); border: 1px solid var(--border); color: var(--fg); border-radius: 8px;">
+        <option value="natural">Pro Natural (Balanced)</option>
+        <option value="hard" selected>Pro Hard Tone (Radio Style)</option>
+      </select>
+      <p style="font-size:0.75rem; color: var(--accents-4); margin-top: 8px;">Hard Tone adds more punch and speech isolation for high-impact content.</p>
+    </div>
+
+    <button class="btn btn-primary" id="au-process" disabled style="width: 100%; justify-content: center; background: #0070f3;">Start Auphonic Processing</button>
       </div>
 
       <div id="auProgress" style="display: none; margin-top: 2rem;">
