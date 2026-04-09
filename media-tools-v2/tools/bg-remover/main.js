@@ -53,7 +53,7 @@ async function processImage(file) {
     const formData = new FormData();
     formData.append('image_file', file);
 
-    const response = await fetch('http://localhost:3000/api/remove-bg', {
+    const response = await fetch('/api/remove-bg', {
       method: 'POST',
       body: formData
     });

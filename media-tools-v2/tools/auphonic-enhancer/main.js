@@ -48,7 +48,7 @@ processBtn.onclick = async () => {
   formData.append('media', selectedFile);
 
   try {
-    const res = await fetch('http://localhost:3000/api/auphonic', {
+    const res = await fetch('/api/auphonic', {
       method: 'POST',
       body: formData
     });
@@ -66,7 +66,7 @@ processBtn.onclick = async () => {
 async function pollStatus(jobId) {
   const intv = setInterval(async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/auphonic/status/${jobId}`);
+      const res = await fetch(`/api/auphonic/status/${jobId}`);
       const job = await res.json();
       
       progressFill.style.width = job.progress + '%';

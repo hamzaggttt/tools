@@ -47,7 +47,7 @@ transcribeBtn.onclick = async () => {
   formData.append('video', selectedFile);
 
   try {
-    const res = await fetch('http://localhost:3000/api/transcribe', {
+    const res = await fetch('/api/transcribe', {
       method: 'POST',
       body: formData
     });
@@ -65,7 +65,7 @@ transcribeBtn.onclick = async () => {
 async function pollTranscription(jobId) {
   const intv = setInterval(async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/status/${jobId}`);
+      const res = await fetch(`/api/status/${jobId}`);
       const job = await res.json();
       
       progFill.style.width = job.progress + '%';
@@ -160,7 +160,7 @@ exportBtn.onclick = async () => {
   };
 
   try {
-    const res = await fetch('http://localhost:3000/api/burn-captions', {
+    const res = await fetch('/api/burn-captions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -184,7 +184,7 @@ exportBtn.onclick = async () => {
 async function pollExport(jobId) {
   const intv = setInterval(async () => {
     try {
-      const res = await fetch(`http://localhost:3000/api/status/${jobId}`);
+      const res = await fetch(`/api/status/${jobId}`);
       const job = await res.json();
       
       progFill.style.width = job.progress + '%';

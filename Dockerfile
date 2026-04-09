@@ -1,29 +1,33 @@
-# Use a Node.js base image
-FROM node:18-bullseye
+# --- STAGE 1: Build Frontend ---
+FROM node:18-bullseye AS build-frontend
+WORKDIR /app
+COPY media-tools-v2/package*.json ./
+RUN npm install
+COPY media-tools-v2/ ./
+RUN npm run build
 
-# Set environment
+# --- STAGE 2: Final Image ---
+FROM node:18-bullseye
 ENV NODE_ENV=production
 
 # Install FFmpeg
 RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
-# Create and change to the app directory
 WORKDIR /usr/src/app
 
-# Copy application dependency manifests
+# Copy backend manifests
 COPY package*.json ./
-
-# Install production dependencies
 RUN npm install --omit=dev
 
-# Copy local code
+# Copy backend code
 COPY . .
 
-# Create necessary directories with permissions
+# Copy built frontend from Stage 1 into backend's public dir
+# We use media-tools-v2/dist because that's what Vite outputs
+COPY --from=build-frontend /app/dist ./public
+
+# Create necessary directories
 RUN mkdir -p uploads output && chmod 777 uploads output
 
-# Expose port (Railway uses PORT env var but EXPOSE is good documentation)
 EXPOSE 3000
-
-# Run the web service
 CMD [ "node", "server.js" ]

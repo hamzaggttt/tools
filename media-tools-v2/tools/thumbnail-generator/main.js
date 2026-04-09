@@ -163,7 +163,7 @@ aiTitleBtn.onclick = async () => {
   if (!prompt) return showToast('Enter video description');
   aiTitleResults.innerHTML = '<p style="font-size: 0.75rem;">Thinking...</p>';
   try {
-    const res = await fetch('http://localhost:3000/api/groq', {
+    const res = await fetch('/api/groq', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
