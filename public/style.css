@@ -26,12 +26,19 @@
 
 body {
   background: var(--bg);
+  background-image: radial-gradient(
+    circle at var(--x, 50%) var(--y, 50%),
+    rgba(0, 112, 243, 0.1) 0%,
+    transparent 600px
+  );
+  background-attachment: fixed;
   color: var(--fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
 a {

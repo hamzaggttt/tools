@@ -45,3 +45,10 @@ export function showToast(msg, type = 'error') {
     setTimeout(() => t.remove(), 300);
   }, 4000);
 }
+
+
+// Mouse follow light effect
+document.addEventListener('mousemove', (e) => {
+  document.body.style.setProperty('--x', e.clientX + 'px');
+  document.body.style.setProperty('--y', e.clientY + 'px');
+});
