@@ -10,8 +10,7 @@ RUN npm run build
 FROM node:20
 ENV NODE_ENV=production
 
-# Install FFmpeg
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+# (FFmpeg is provided by ffmpeg-static package in Node, so no apt-get needed!)
 
 WORKDIR /usr/src/app
 
@@ -19,14 +18,13 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm install --omit=dev
 
-# Copy backend code
+# Copy all code
 COPY . .
 
-# Copy built frontend from Stage 1 into backend's public dir
-# We use media-tools-v2/dist because that's what Vite outputs
+# Inject the built frontend
 COPY --from=build-frontend /app/dist ./public
 
-# Create necessary directories
+# Setup directories
 RUN mkdir -p uploads output && chmod 777 uploads output
 
 EXPOSE 3000
