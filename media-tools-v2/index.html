@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediaTools — Pro Media Editing Suite</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="mask-glow"></div>
+  
+  <nav>
+    <div class="container">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        MediaTools
+      </div>
+      <div class="nav-links">
+        <a href="/tools/bg-remover/">BG Remover</a>
+        <a href="/tools/video-converter/">Video Conv</a>
+        <a href="/tools/image-converter/">Image Conv</a>
+        <a href="/tools/caption-ai/">Caption AI</a>
+        <a href="/tools/auphonic-enhancer/">Audio</a>
+      </div>
+      <a href="https://github.com/hamzagttt/tools" target="_blank" class="btn btn-secondary">GitHub</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Edit media.<br/><span style="color: var(--accents-5)">Instantly.</span></h1>
+      <p>A suite of professional media tools powered by AI and WebAssembly. No sign-up, no server uploads for conversion, 100% private.</p>
+      <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="#tools" class="btn btn-primary">Browse Tools</a>
+        <a href="/tools/caption-ai/" class="btn btn-secondary">Try Caption AI</a>
+      </div>
+    </section>
+
+    <section id="tools" style="padding-bottom: 8rem;">
+      <h2 style="margin-bottom: 3rem; text-align: center;">Our Tools</h2>
+      <div class="grid">
+        <a href="/tools/bg-remover/" class="card">
+          <h3 style="margin-bottom: 0.5rem;">Background Remover</h3>
+          <p style="font-size: 0.875rem;">Remove backgrounds from images instantly using Pro AI technology.</p>
+          <div style="margin-top: 1.5rem; color: var(--fg); font-weight: 500; font-size: 0.75rem;">PRO API ENABLED →</div>
+        </a>
+        <a href="/tools/video-converter/" class="card">
+          <h3 style="margin-bottom: 0.5rem;">Video Converter</h3>
+          <p style="font-size: 0.875rem;">Convert videos locally via FFmpeg.js. Support for MP4, MOV, WEBM.</p>
+          <div style="margin-top: 1.5rem; color: var(--fg); font-weight: 500; font-size: 0.75rem;">BROWSER-SIDE →</div>
+        </a>
+        <a href="/tools/image-converter/" class="card">
+          <h3 style="margin-bottom: 0.5rem;">Image Converter</h3>
+          <p style="font-size: 0.875rem;">Instant conversion between PNG, JPG, and WEBP.</p>
+          <div style="margin-top: 1.5rem; color: var(--fg); font-weight: 500; font-size: 0.75rem;">INSTANT →</div>
+        </a>
+        <a href="/tools/caption-ai/" class="card">
+          <h3 style="margin-bottom: 0.5rem;">Caption AI</h3>
+          <p style="font-size: 0.875rem;">AI-powered transcription and smart captioning with advanced timeline editor.</p>
+          <div style="margin-top: 1.5rem; color: var(--fg); font-weight: 500; font-size: 0.75rem;">NEW FEATURE →</div>
+        </a>
+        <a href="/tools/auphonic-enhancer/" class="card">
+          <h3 style="margin-bottom: 0.5rem;">Auphonic Enhancer</h3>
+          <p style="font-size: 0.875rem;">Master your audio using the industry-leading Auphonic engine.</p>
+          <div style="margin-top: 1.5rem; color: var(--fg); font-weight: 500; font-size: 0.75rem;">PRO AUDIO →</div>
+        </a>
+        <a href="/tools/thumbnail-generator/" class="card">
+          <h3 style="margin-bottom: 0.5rem;">Thumbnail Generator</h3>
+          <p style="font-size: 0.875rem;">Create viral-style thumbnails with AI image generation and face tracking.</p>
+          <div style="margin-top: 1.5rem; color: var(--fg); font-weight: 500; font-size: 0.75rem;">AI-POWERED →</div>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer style="border-top: 1px solid var(--border); padding: 4rem 0; text-align: center; color: var(--accents-5); font-size: 0.875rem;">
+    <p>&copy; 2026 MediaTools. Built with privacy in mind.</p>
+  </footer>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

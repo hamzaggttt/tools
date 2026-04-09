@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thumbnail Generator — MediaTools</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
+  <style>
+    .editor-layout {
+      display: grid; grid-template-columns: 1fr 340px; gap: 2rem;
+      margin-top: 2rem; height: calc(100vh - 160px);
+    }
+    .canvas-wrap {
+      background: #000; border: 1px solid var(--border); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
+    }
+    canvas { max-width: 100%; max-height: 100%; background: #000; cursor: crosshair; }
+    .controls-pane {
+      display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; padding-right: 0.5rem;
+    }
+    .control-group { background: var(--accents-1); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+    .control-group h4 { font-size: 0.75rem; text-transform: uppercase; color: var(--accents-5); margin-bottom: 0.75rem; letter-spacing: 0.05em; }
+    .row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .row label { font-size: 0.75rem; min-width: 60px; color: var(--accents-5); }
+    .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+    .emoji-btn { background: var(--accents-2); border: 1px solid var(--border); border-radius: 4px; padding: 4px; cursor: pointer; font-size: 1.25rem; transition: 0.2s; }
+    .emoji-btn:hover { background: var(--accents-3); transform: scale(1.1); }
+    textarea, input[type="text"], select { width: 100%; background: var(--accents-2); border: 1px solid var(--border); color: var(--fg); border-radius: 6px; padding: 0.5rem; font-size: 0.8125rem; outline: none; }
+    input[type="range"] { flex: 1; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <div class="logo"><a href="/">MediaTools</a></div>
+      <div class="nav-links">
+        <a href="/tools/bg-remover/">BG Remover</a>
+        <a href="/tools/video-converter/">Video Conv</a>
+        <a href="/tools/image-converter/">Image Conv</a>
+        <a href="/tools/caption-ai/">Caption AI</a>
+        <a href="/tools/auphonic-enhancer/">Audio</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div id="upload-screen" class="hero" style="padding: 4rem 0;">
+      <h1 style="font-size: 2.5rem;">Thumbnail Generator</h1>
+      <p style="margin-bottom: 3rem;">Create eye-catching thumbnails with AI generation, face tracking, and pro effects.</p>
+      
+      <div class="grid" style="max-width: 800px; margin: 0 auto;">
+        <div class="card" onclick="document.getElementById('file-input').click()" style="cursor: pointer; border-style: dashed;">
+          <input type="file" id="file-input" accept="image/*,video/mp4" hidden />
+          <h3>Upload Image/Video</h3>
+          <p style="font-size: 0.875rem;">Extract frame from video or upload photo.</p>
+        </div>
+        <div class="card" style="border-color: var(--blue);">
+          <h3 style="color: var(--blue);">Generate with AI</h3>
+          <textarea id="ai-img-prompt" placeholder="A person expressing shock at a laptop..." style="margin: 0.5rem 0;"></textarea>
+          <button class="btn btn-primary" id="ai-gen-btn" style="width: 100%;">Create Image</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="editor-screen" class="editor-layout" style="display: none;">
+      <div class="canvas-wrap">
+        <canvas id="canvas" width="1280" height="720"></canvas>
+      </div>
+
+      <div class="controls-pane">
+        <button class="btn btn-secondary" onclick="location.reload()" style="width: 100%;">✕ Start New</button>
+
+        <div class="control-group">
+          <h4>🤖 AI Titles</h4>
+          <textarea id="ai-title-prompt" placeholder="Describe video topic..." style="margin-bottom: 0.5rem;"></textarea>
+          <button class="btn btn-secondary" id="ai-title-btn" style="width: 100%; font-size: 0.75rem;">Generate Titles</button>
+          <div id="ai-title-results" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 4px;"></div>
+        </div>
+
+        <div class="control-group">
+          <h4>✏️ Text Overlay</h4>
+          <input type="text" id="text-input" placeholder="Main Headline..." />
+          <div class="row" style="margin-top: 0.5rem;">
+            <label>Size</label><input type="range" id="font-size" min="20" max="150" value="80" />
+          </div>
+          <div class="row">
+            <label>Color</label><input type="color" id="text-color" value="#ffffff" />
+            <label>Stroke</label><input type="color" id="stroke-color" value="#000000" />
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h4>🎯 Elements</h4>
+          <div class="emoji-grid" id="emoji-grid">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h4>🎨 Effects</h4>
+          <div class="row"><label>Bright</label><input type="range" id="bright" min="50" max="200" value="100" /></div>
+          <div class="row"><label>Contrast</label><input type="range" id="contrast" min="50" max="200" value="100" /></div>
+          <button class="btn btn-secondary" id="face-zoom-btn" style="width: 100%; font-size: 0.75rem; margin-top: 0.5rem;">🔍 AI Face Zoom</button>
+        </div>
+
+        <div class="control-group">
+          <h4>📥 Export</h4>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-primary" id="export-png" style="flex: 1;">PNG</button>
+            <button class="btn btn-secondary" id="export-jpg" style="flex: 1;">JPG</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Background Remover — MediaTools</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <div class="logo">
+        <a href="/" style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+          MediaTools
+        </a>
+      </div>
+      <div class="nav-links">
+        <a href="/tools/bg-remover/" class="active">BG Remover</a>
+        <a href="/tools/video-converter/">Video Conv</a>
+        <a href="/tools/image-converter/">Image Conv</a>
+        <a href="/tools/caption-ai/">Caption AI</a>
+        <a href="/tools/auphonic-enhancer/">Audio</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container" style="padding: 4rem 2rem;">
+    <section style="max-width: 800px; margin: 0 auto;">
+      <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Background Remover</h1>
+      <p style="margin-bottom: 3rem;">Remove backgrounds from images instantly. Powered by Pro AI technology. No data is stored.</p>
+
+      <div class="card" id="dropzone" style="min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-style: dashed; cursor: pointer;">
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/jpg" hidden />
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accents-4)" stroke-width="1.5" style="margin-bottom: 1.5rem;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <p style="font-size: 1rem; color: var(--fg); margin-bottom: 0.25rem;">Drag & drop image or click to upload</p>
+        <p style="font-size: 0.875rem;">JPG, PNG · Max 12 MB</p>
+      </div>
+
+      <div id="previewSection" style="display: none; margin-top: 3rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <div>
+            <p style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--accents-5); margin-bottom: 1rem;">Original</p>
+            <img id="origImg" style="width: 100%; border-radius: 8px; border: 1px solid var(--border);" />
+          </div>
+          <div>
+            <p style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--accents-5); margin-bottom: 1rem;">Result</p>
+            <div id="resultContainer" style="position: relative; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; background: repeating-conic-gradient(#333 0% 25%, transparent 0% 50%) 0 0 / 20px 20px;">
+              <img id="resultImg" style="width: 100%; display: block;" />
+              <div id="processingOverlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;">
+                <div class="spinner"></div>
+                <p style="font-size: 0.875rem; color: #fff;">Removal in progress...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+          <button id="resetBtn" class="btn btn-secondary">Try Another</button>
+          <button id="downloadBtn" class="btn btn-primary" disabled>Download PNG</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <style>
+    .spinner {
+      width: 24px; height: 24px; border: 2px solid var(--accents-2);
+      border-top-color: var(--fg); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #dropzone.dragover { border-color: var(--fg); background: var(--accents-2); }
+  </style>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -405,40 +405,49 @@ function formatAssTime(seconds) {
   return `${hh}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
 }
 
+const FormDataNode = require('form-data');
 app.post('/api/auphonic', upload.single('media'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No media provided' });
   const jobId = uuidv4();
   jobs[jobId] = { status: 'processing', progress: 5, step: 'Uploading to Auphonic...' };
   
-  // Respond immediately with Job ID so UI can poll
   res.json({ jobId });
 
   try {
-    const fileBuffer = fs.readFileSync(req.file.path);
-    const blob = new Blob([fileBuffer], { type: req.file.mimetype || 'audio/mpeg' });
-
-    const formData = new FormData();
-    formData.append('input_file', blob, req.file.originalname);
-    formData.append('action', 'start');
+    const fileStream = fs.createReadStream(req.file.path);
+    const form = new FormDataNode();
     
-    // Algorithms
-    formData.append('denoise', 'true');
-    formData.append('denoisemethod', 'speech_isolation');
-    formData.append('denoiseamount', '12');
-    formData.append('leveler', 'true');
-    formData.append('levelerstrength', '80');
-    formData.append('filtering', 'true');
-    formData.append('loudnesstarget', '-16');
-    formData.append('output_files', JSON.stringify([{ format: 'mp3', bitrate: 192 }]));
+    // Auphonic expects multipart/form-data with 'input_file'
+    form.append('input_file', fileStream, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype || (req.file.originalname.endsWith('.mp3') ? 'audio/mpeg' : 'video/mp4')
+    });
+    
+    form.append('action', 'start');
+    form.append('denoise', 'true');
+    form.append('denoisemethod', 'speech_isolation');
+    form.append('denoiseamount', '12');
+    form.append('leveler', 'true');
+    form.append('levelerstrength', '80');
+    form.append('filtering', 'true');
+    form.append('loudnesstarget', '-16');
+
+    // Specify output format dynamically or default to mp3
+    const outputFormat = req.file.originalname.endsWith('.mp3') ? 'mp3' : 'mp4';
+    form.append('output_files', JSON.stringify([{ format: outputFormat, bitrate: 192 }]));
 
     const auphonicRes = await fetch('https://auphonic.com/api/simple/productions.json', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${AUPHONIC_KEY}` },
-      body: formData
+      headers: { 
+        'Authorization': `Bearer ${AUPHONIC_KEY}`,
+        ...form.getHeaders()
+      },
+      body: form
     });
 
     if (!auphonicRes.ok) {
       const errTxt = await auphonicRes.text();
+      console.error(`Auphonic API failed (${auphonicRes.status}):`, errTxt);
       throw new Error(`Auphonic API failed: ${errTxt}`);
     }
 

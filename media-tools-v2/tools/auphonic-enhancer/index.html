@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auphonic Enhancer — MediaTools</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <div class="logo"><a href="/">MediaTools</a></div>
+      <div class="nav-links">
+        <a href="/tools/bg-remover/">BG Remover</a>
+        <a href="/tools/video-converter/">Video Conv</a>
+        <a href="/tools/image-converter/">Image Conv</a>
+        <a href="/tools/caption-ai/">Caption AI</a>
+        <a href="/tools/auphonic-enhancer/" class="active">Audio</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container" style="padding: 4rem 2rem;">
+    <section style="max-width: 800px; margin: 0 auto;">
+      <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Auphonic Enhancer</h1>
+      <p style="margin-bottom: 3rem;">Professional audio mastering and noise reduction powered by the Auphonic API.</p>
+
+      <div class="card" id="dropzone" style="min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-style: dashed; cursor: pointer;">
+        <input id="auFileInput" type="file" accept="audio/*,video/mp4" hidden />
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accents-4)" stroke-width="1.5" style="margin-bottom: 1.5rem;"><path d="M12 2v20M17 5v14M7 8v8M22 10v4M2 11v2"/></svg>
+        <p style="font-size: 1rem; color: var(--fg); margin-bottom: 0.25rem;">Drag & drop audio or video or click to upload</p>
+        <p style="font-size: 0.875rem;">MP3, WAV, AAC, MP4 supported</p>
+      </div>
+
+      <div id="auInfo" style="display: none; margin-top: 2rem;">
+        <div class="card" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="flex: 1;">
+            <p id="auFileName" style="font-weight: 600; font-size: 0.875rem; color: var(--fg);"></p>
+            <p id="auFileSize" style="font-size: 0.75rem; color: var(--accents-5);"></p>
+          </div>
+          <button class="btn btn-ghost" id="resetBtn">✕</button>
+        </div>
+
+        <button class="btn btn-primary" id="processBtn" style="width: 100%;">Start Auphonic Processing</button>
+      </div>
+
+      <div id="auProgress" style="display: none; margin-top: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <span id="progressLabel" style="font-size: 0.75rem; color: var(--accents-5);">Uploading...</span>
+          <span id="progressPct" style="font-size: 0.75rem; font-weight: 600; color: var(--fg);">0%</span>
+        </div>
+        <div style="height: 4px; background: var(--accents-2); border-radius: 2px; overflow: hidden;">
+          <div id="progressFill" style="height: 100%; background: #0070f3; width: 0%; transition: width 0.3s;"></div>
+        </div>
+      </div>
+
+      <div id="auResult" style="display: none; margin-top: 2rem;">
+        <div class="card" style="background: rgba(0, 112, 243, 0.05); border-color: rgba(0, 112, 243, 0.2);">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <p style="font-weight: 600; color: var(--fg);">Mastering complete!</p>
+              <p style="font-size: 0.875rem; color: var(--accents-5);">Your file is ready for download.</p>
+            </div>
+            <a id="downloadBtn" href="#" download class="btn btn-primary" style="background: #0070f3;">↓ Download</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

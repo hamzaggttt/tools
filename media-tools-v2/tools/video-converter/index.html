@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Converter — MediaTools</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <div class="logo"><a href="/">MediaTools</a></div>
+      <div class="nav-links">
+        <a href="/tools/bg-remover/">BG Remover</a>
+        <a href="/tools/video-converter/" class="active">Video Conv</a>
+        <a href="/tools/image-converter/">Image Conv</a>
+        <a href="/tools/caption-ai/">Caption AI</a>
+        <a href="/tools/auphonic-enhancer/">Audio</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container" style="padding: 4rem 2rem;">
+    <section style="max-width: 800px; margin: 0 auto;">
+      <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Video Converter</h1>
+      <p style="margin-bottom: 3rem;">Convert between MP4, MOV, and WEBM entirely in your browser. Fast and private.</p>
+
+      <div class="card" id="dropzone" style="min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-style: dashed; cursor: pointer;">
+        <input id="vidFileInput" type="file" accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,.mp4,.mov,.avi,.webm" hidden />
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accents-4)" stroke-width="1.5" style="margin-bottom: 1.5rem;"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        <p style="font-size: 1rem; color: var(--fg); margin-bottom: 0.25rem;">Drag & drop video or click to upload</p>
+        <p style="font-size: 0.875rem;">MP4, MOV, AVI, WEBM · Max 500 MB</p>
+      </div>
+
+      <div id="vidInfo" style="display: none; margin-top: 2rem;">
+        <div class="card" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="flex: 1;">
+            <p id="vidFileName" style="font-weight: 600; font-size: 0.875rem; color: var(--fg);"></p>
+            <p id="vidFileSize" style="font-size: 0.75rem; color: var(--accents-5);"></p>
+          </div>
+          <button class="btn btn-ghost" id="resetBtn">✕</button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+          <span style="font-size: 0.875rem; color: var(--accents-5);">Convert to:</span>
+          <select id="vidFormat" style="padding: 0.4rem 0.8rem;">
+            <option value="mp4">MP4 (H.264)</option>
+            <option value="mov">MOV (QuickTime)</option>
+            <option value="webm">WEBM (VP9)</option>
+          </select>
+          <button class="btn btn-primary" id="convertBtn">Convert Video</button>
+        </div>
+      </div>
+
+      <div id="vidProgress" style="display: none; margin-top: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <span id="progressLabel" style="font-size: 0.75rem; color: var(--accents-5);">Initializing...</span>
+          <span id="progressPct" style="font-size: 0.75rem; font-weight: 600; color: var(--fg);">0%</span>
+        </div>
+        <div style="height: 4px; background: var(--accents-2); border-radius: 2px; overflow: hidden;">
+          <div id="progressFill" style="height: 100%; background: var(--fg); width: 0%; transition: width 0.3s;"></div>
+        </div>
+      </div>
+
+      <div id="vidResult" style="display: none; margin-top: 2rem;">
+        <div class="card" style="background: var(--glass); border-color: var(--accents-3);">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <p style="font-weight: 600; color: var(--fg);">Conversion finished!</p>
+              <p id="resultInfo" style="font-size: 0.75rem; color: var(--accents-5);"></p>
+            </div>
+            <button class="btn btn-primary" id="downloadBtn">Download</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
