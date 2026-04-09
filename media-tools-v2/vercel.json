@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://tools-production.up.railway.app/api/$1" },
+    { "source": "/output/(.*)", "destination": "https://tools-production.up.railway.app/output/$1" }
+  ]
+}
