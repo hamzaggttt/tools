@@ -12,10 +12,11 @@
     /* Caption AI Specific Styles */
     .caption-grid {
       display: grid;
-      grid-template-columns: 1fr 320px;
+      grid-template-columns: 1fr 340px;
       gap: 2rem;
       height: calc(100vh - 120px);
       margin-top: 1rem;
+      overflow: hidden; /* Prevent global page scroll */
     }
 
     .video-preview-pane {
@@ -27,13 +28,14 @@
       border-radius: 12px;
       padding: 1.5rem;
       position: relative;
+      overflow: hidden; /* Keep children contained */
     }
 
     video {
       width: 100%;
       border-radius: 8px;
       background: #000;
-      max-height: 400px;
+      max-height: 380px;
       object-fit: contain;
     }
 
@@ -83,6 +85,8 @@
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      overflow-y: auto; /* Allow sidebar to scroll if many options */
+      padding-right: 4px;
     }
 
     .style-card {
@@ -97,11 +101,13 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 0.75rem;
+      gap: 10px;
     }
 
     .style-row label {
       font-size: 0.75rem;
       color: var(--accents-5);
+      flex: 1;
     }
 
     input[type="color"], input[type="range"], select {
@@ -109,7 +115,8 @@
       border: 1px solid var(--border);
       color: var(--fg);
       border-radius: 4px;
-      padding: 2px;
+      padding: 4px;
+      font-size: 0.75rem;
     }
 
     .progress-bar-wrapper {
@@ -178,27 +185,65 @@
         <div class="progress-bar-wrapper" id="prog-wrap">
           <div class="progress-bar-fill" id="prog-fill"></div>
         </div>
-        <div id="status-text" style="font-size: 0.75rem; color: var(--accents-5); text-align: center;"></div>
+        <div id="status-text" style="font-size: 0.75rem; color: var(--accents-5); text-align: center; margin-top: 0.5rem;"></div>
       </div>
 
       <!-- SIDEBAR -->
       <div class="sidebar-pane">
         <div class="style-card">
-          <h4 style="margin-bottom: 1rem; font-size: 0.875rem;">Export Style</h4>
+          <h4 style="margin-bottom: 1rem; font-size: 0.875rem;">Design Options</h4>
+          
+          <div class="style-row">
+            <label>Font Family</label>
+            <select id="font">
+              <option value="Arial">Arial (Standard)</option>
+              <option value="Inter" selected>Inter (Premium)</option>
+              <option value="Syne">Syne (Bold)</option>
+              <option value="Verdana">Verdana</option>
+            </select>
+          </div>
+
           <div class="style-row">
             <label>Font Size</label>
             <input type="range" id="size" min="20" max="120" value="72" />
           </div>
+
           <div class="style-row">
-            <label>Color</label>
+            <label>Alignment</label>
+            <select id="alignment">
+              <option value="2" selected>Center (Bottom)</option>
+              <option value="1">Left (Bottom)</option>
+              <option value="3">Right (Bottom)</option>
+              <option value="8">Center (Top)</option>
+            </select>
+          </div>
+
+          <div class="style-row">
+            <label>Primary Color</label>
             <input type="color" id="primaryColor" value="#ffffff" />
           </div>
+
           <div class="style-row">
-            <label>Outline</label>
+            <label>Outline Color</label>
             <input type="color" id="outlineColor" value="#000000" />
           </div>
+
           <div class="style-row">
-            <label>Position Y</label>
+            <label>Text Shadow</label>
+            <select id="shadow">
+              <option value="0">None</option>
+              <option value="2" selected>Medium</option>
+              <option value="4">Hard</option>
+            </select>
+          </div>
+
+          <div class="style-row">
+            <label>Uppercase Captions</label>
+            <input type="checkbox" id="uppercase" style="width: 16px; height: 16px;" checked />
+          </div>
+
+          <div class="style-row">
+            <label>Vertical Position</label>
             <input type="range" id="posY" min="0" max="100" value="80" />
           </div>
         </div>

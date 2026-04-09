@@ -362,7 +362,7 @@ app.post('/api/burn-captions', async (req, res) => {
 });
 
 function generateAssContent(segments, style) {
-  const { fontSize, primaryColor, outlineColor, outlineWidth, posX, posY } = style;
+  const { font, fontSize, primaryColor, outlineColor, shadow, alignment, posX, posY } = style;
   
   // Script resolution (1920x1080 is standard HD)
   const resX = 1920;
@@ -380,7 +380,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,${fontSize},&H${primaryColor},&H000000FF,&H${outlineColor},&H00000000,-1,0,0,0,100,100,0,0,1,${outlineWidth},0,2,10,10,10,1
+Style: Default,${font},${fontSize},&H${primaryColor},&H000000FF,&H${outlineColor},&H00000000,-1,0,0,0,100,100,0,0,1,3,${shadow},${alignment},10,10,10,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

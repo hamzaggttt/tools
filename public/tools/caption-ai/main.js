@@ -138,7 +138,12 @@ videoPlayer.ontimeupdate = () => {
     if (activeSegmentIndex !== -1) {
       const activeEl = timeline.children[activeSegmentIndex];
       activeEl?.classList.add('active');
-      activeEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      
+      // Fixed scrolling: only scroll the timeline container, not the page
+      timeline.scrollTo({
+        top: activeEl.offsetTop - (timeline.offsetHeight / 2) + (activeEl.offsetHeight / 2),
+        behavior: 'smooth'
+      });
     }
   }
 };
@@ -147,17 +152,25 @@ exportBtn.onclick = async () => {
   if (!segments.length) return;
   
   exportBtn.disabled = true;
-  statusText.textContent = 'Burning captions into video... (may take a minute)';
+  statusText.textContent = 'Burning captions... (may take a minute)';
   progFill.style.width = '5%';
   
   const style = {
+    font: document.getElementById('font').value,
     fontSize: styleInputs.fontSize.value,
-    primaryColor: styleInputs.primaryColor.value.replace('#', 'FF').toUpperCase(), // Convert to ASS color format
+    alignment: document.getElementById('alignment').value,
+    primaryColor: styleInputs.primaryColor.value.replace('#', 'FF').toUpperCase(),
     outlineColor: styleInputs.outlineColor.value.replace('#', '00').toUpperCase(),
-    outlineWidth: 2,
+    shadow: document.getElementById('shadow').value,
+    uppercase: document.getElementById('uppercase').checked,
     posX: 50,
     posY: styleInputs.posY.value
   };
+
+  const processedSegments = segments.map(s => ({
+    ...s,
+    text: style.uppercase ? s.text.toUpperCase() : s.text
+  }));
 
   try {
     const res = await fetch('/api/burn-captions', {
@@ -166,7 +179,7 @@ exportBtn.onclick = async () => {
       body: JSON.stringify({
         jobId: 'local-res',
         originalFile: originalFileUrl,
-        segments: segments,
+        segments: processedSegments,
         style: style
       })
     });
