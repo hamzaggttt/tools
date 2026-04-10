@@ -493,6 +493,16 @@ app.get('/api/auphonic/status/:id', (req, res) => {
 });
 
 function pollAuphonicJob(jobId, uuid) {
+  let pollCount = 0;
+  const statusMessages = [
+    'Processing on Auphonic servers...',
+    'Analyzing audio levels...',
+    'Applying noise reduction...',
+    'Leveling audio dynamics...',
+    'Mastering output...',
+    'Finalizing enhancement...'
+  ];
+
   const intv = setInterval(async () => {
     try {
       const res = await fetch(`https://auphonic.com/api/production/${uuid}.json`, {
@@ -506,7 +516,6 @@ function pollAuphonicJob(jobId, uuid) {
         // Done
         clearInterval(intv);
         console.log('=== AUPHONIC COMPLETED ===');
-        console.log('Algorithms:', JSON.stringify(data.data.algorithms, null, 2));
         console.log('Output files:', JSON.stringify(data.data.output_files, null, 2));
         const outUrl = data.data.output_files && data.data.output_files.length ? data.data.output_files[0].download_url + '?bearer_token=' + AUPHONIC_KEY : null;
         jobs[jobId] = { status: 'completed', progress: 100, step: 'Done!', resultUrl: outUrl };
@@ -515,9 +524,12 @@ function pollAuphonicJob(jobId, uuid) {
         clearInterval(intv);
         jobs[jobId] = { status: 'error', progress: 100, error: 'Auphonic reported failure.' };
       } else {
-        // Still processing (status 0, 1, etc.)
-        // Just keep waiting. Auphonic doesn't always give precise percentages, so we just stick at 50% visually
-        jobs[jobId].progress = 50;
+        // Still processing — animate progress from 30% to 90% gradually
+        pollCount++;
+        const fakeProgress = Math.min(30 + pollCount * 5, 90);
+        const msgIndex = Math.min(pollCount - 1, statusMessages.length - 1);
+        jobs[jobId].progress = fakeProgress;
+        jobs[jobId].step = statusMessages[msgIndex];
       }
     } catch(err) {
       console.error('Poll error', err);
