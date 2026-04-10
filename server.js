@@ -423,14 +423,11 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
 
     console.log('=== AUPHONIC CONFIG ===', { denoiseAmount, levelerStrength, loudnessTarget, denoiseMethod, filtering });
 
-    const fileStream = fs.createReadStream(req.file.path);
+    // Read file into buffer to ensure full upload (streams can fail with native fetch)
+    const fileBuffer = fs.readFileSync(req.file.path);
     const form = new FormDataNode();
     
-    form.append('input_file', fileStream, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype || (req.file.originalname.endsWith('.mp3') ? 'audio/mpeg' : 'video/mp4')
-    });
-    
+    // Put all config fields FIRST, file LAST (some APIs require this order)
     form.append('action', 'start');
     form.append('denoise', 'true');
     form.append('denoisemethod', denoiseMethod);
@@ -442,6 +439,12 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
 
     const outputFormat = req.file.originalname.endsWith('.mp3') ? 'mp3' : 'mp4';
     form.append('output_files', JSON.stringify([{ format: outputFormat, bitrate: 192 }]));
+
+    // File goes LAST
+    form.append('input_file', fileBuffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype || (req.file.originalname.endsWith('.mp3') ? 'audio/mpeg' : 'video/mp4')
+    });
 
     const auphonicRes = await fetch('https://auphonic.com/api/simple/productions.json', {
       method: 'POST',
@@ -460,14 +463,18 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
 
     const data = await auphonicRes.json();
     console.log('=== AUPHONIC RESPONSE ===');
-    console.log(JSON.stringify(data, null, 2));
+    console.log('Status:', data.data?.status, data.data?.status_string);
+    console.log('Input file:', data.data?.input_file);
+    console.log('Length:', data.data?.length);
     const uuid = data.data && data.data.uuid;
     
     if (!uuid) throw new Error('No UUID returned from Auphonic');
 
     jobs[jobId].auphonicUuid = uuid;
-    jobs[jobId].step = 'Processing on Auphonic servers...';
+    jobs[jobId].progress = 20;
+    jobs[jobId].step = 'File uploaded — processing on Auphonic servers...';
     
+    // Cleanup local file AFTER successful upload
     fs.unlink(req.file.path, () => {});
     
     pollAuphonicJob(jobId, uuid);
