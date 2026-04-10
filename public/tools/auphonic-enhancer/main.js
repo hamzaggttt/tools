@@ -72,8 +72,9 @@ async function pollStatus(jobId) {
       const res = await fetch(`/api/auphonic/status/${jobId}`);
       const job = await res.json();
       
-      progressFill.style.width = job.progress + '%';
-      progressPct.textContent = job.progress + '%';
+      const progress = job.progress || 0;
+      progressFill.style.width = progress + '%';
+      progressPct.textContent = progress + '%';
       progressLabel.textContent = job.step || 'Processing...';
 
       if (job.status === 'completed') {
