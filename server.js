@@ -414,45 +414,39 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
   res.json({ jobId });
 
   try {
-    const tone = req.body.tone || 'natural';
+    // Read user configuration from form data
+    const denoiseAmount = req.body.denoise || '12';
+    const levelerStrength = req.body.leveler || '80';
+    const loudnessTarget = req.body.loudness || '-16';
+    const denoiseMethod = req.body.denoiseMethod || 'speech_isolation';
+    const filtering = req.body.filtering !== 'false';
+
+    console.log('=== AUPHONIC CONFIG ===', { denoiseAmount, levelerStrength, loudnessTarget, denoiseMethod, filtering });
+
     const fileStream = fs.createReadStream(req.file.path);
     const form = new FormDataNode();
     
-    // Auphonic expects multipart/form-data with 'input_file'
     form.append('input_file', fileStream, {
       filename: req.file.originalname,
       contentType: req.file.mimetype || (req.file.originalname.endsWith('.mp3') ? 'audio/mpeg' : 'video/mp4')
     });
     
     form.append('action', 'start');
-    
-    // Algorithm customization based on Tone
-    if (tone === 'hard') {
-      form.append('denoise', 'true');
-      form.append('denoisemethod', 'speech_isolation');
-      form.append('denoiseamount', '15'); // Max isolation
-      form.append('leveler', 'true');
-      form.append('levelerstrength', '95'); // Radio-style compression
-      form.append('loudnesstarget', '-14'); // Louder profile
-    } else {
-      form.append('denoise', 'true');
-      form.append('denoisemethod', 'speech_isolation');
-      form.append('denoiseamount', '10');
-      form.append('leveler', 'true');
-      form.append('levelerstrength', '70');
-      form.append('loudnesstarget', '-16');
-    }
-    
-    form.append('filtering', 'true');
+    form.append('denoise', 'true');
+    form.append('denoisemethod', denoiseMethod);
+    form.append('denoiseamount', denoiseAmount);
+    form.append('leveler', 'true');
+    form.append('levelerstrength', levelerStrength);
+    form.append('loudnesstarget', loudnessTarget);
+    form.append('filtering', filtering ? 'true' : 'false');
 
-    // Specify output format dynamically or default to mp3
     const outputFormat = req.file.originalname.endsWith('.mp3') ? 'mp3' : 'mp4';
     form.append('output_files', JSON.stringify([{ format: outputFormat, bitrate: 192 }]));
 
     const auphonicRes = await fetch('https://auphonic.com/api/simple/productions.json', {
       method: 'POST',
       headers: { 
-        'Authorization': `Bearer ${AUPHONIC_KEY}`, // Corrected back to Bearer
+        'Authorization': `Bearer ${AUPHONIC_KEY}`,
         ...form.getHeaders()
       },
       body: form
@@ -474,9 +468,8 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
     jobs[jobId].auphonicUuid = uuid;
     jobs[jobId].step = 'Processing on Auphonic servers...';
     
-    fs.unlink(req.file.path, () => {}); // cleanup local file
+    fs.unlink(req.file.path, () => {});
     
-    // Start polling Auphonic
     pollAuphonicJob(jobId, uuid);
 
   } catch (err) {

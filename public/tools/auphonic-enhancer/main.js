@@ -7,7 +7,7 @@ const fileInput = document.getElementById('auFileInput');
 const auInfo = document.getElementById('auInfo');
 const auFileName = document.getElementById('auFileName');
 const auFileSize = document.getElementById('auFileSize');
-const processBtn = document.getElementById('au-process'); // FIXED: Matches ID in index.html
+const processBtn = document.getElementById('au-process');
 const resetBtn = document.getElementById('resetBtn');
 const auProgress = document.getElementById('auProgress');
 const progressFill = document.getElementById('progressFill');
@@ -16,6 +16,37 @@ const progressLabel = document.getElementById('progressLabel');
 const auResult = document.getElementById('auResult');
 const downloadBtn = document.getElementById('downloadBtn');
 
+// Range slider live value displays
+const denoiseSlider = document.getElementById('au-denoise');
+const denoiseVal = document.getElementById('au-denoise-val');
+const levelerSlider = document.getElementById('au-leveler');
+const levelerVal = document.getElementById('au-leveler-val');
+
+denoiseSlider.oninput = () => denoiseVal.textContent = denoiseSlider.value;
+levelerSlider.oninput = () => levelerVal.textContent = levelerSlider.value + '%';
+
+// Preset auto-fill
+document.getElementById('au-tone').onchange = (e) => {
+  const preset = e.target.value;
+  if (preset === 'natural') {
+    denoiseSlider.value = 8; denoiseVal.textContent = '8';
+    levelerSlider.value = 60; levelerVal.textContent = '60%';
+    document.getElementById('au-loudness').value = '-16';
+    document.getElementById('au-denoise-method').value = 'auto';
+  } else if (preset === 'medium') {
+    denoiseSlider.value = 12; denoiseVal.textContent = '12';
+    levelerSlider.value = 80; levelerVal.textContent = '80%';
+    document.getElementById('au-loudness').value = '-16';
+    document.getElementById('au-denoise-method').value = 'speech_isolation';
+  } else if (preset === 'hard') {
+    denoiseSlider.value = 18; denoiseVal.textContent = '18';
+    levelerSlider.value = 95; levelerVal.textContent = '95%';
+    document.getElementById('au-loudness').value = '-14';
+    document.getElementById('au-denoise-method').value = 'speech_isolation';
+  }
+};
+
+// File handling
 dropzone.onclick = () => fileInput.click();
 fileInput.onchange = (e) => handleFile(e.target.files[0]);
 
@@ -34,21 +65,27 @@ function handleFile(file) {
   auInfo.style.display = 'block';
   dropzone.style.display = 'none';
   auResult.style.display = 'none';
-  processBtn.disabled = false; // FIXED: Enable button after file selection
+  processBtn.disabled = false;
 }
 
+// Process
 processBtn.onclick = async () => {
   if (!selectedFile) return;
   
   processBtn.disabled = true;
   auProgress.style.display = 'block';
   progressFill.style.width = '5%';
-  progressLabel.textContent = 'Uploading to enhancement engine...';
+  progressPct.textContent = '5%';
+  progressLabel.textContent = 'Uploading to Auphonic servers...';
   
-  const tone = document.getElementById('au-tone').value;
   const formData = new FormData();
   formData.append('media', selectedFile);
-  formData.append('tone', tone);
+  formData.append('tone', document.getElementById('au-tone').value);
+  formData.append('loudness', document.getElementById('au-loudness').value);
+  formData.append('denoise', denoiseSlider.value);
+  formData.append('leveler', levelerSlider.value);
+  formData.append('denoiseMethod', document.getElementById('au-denoise-method').value);
+  formData.append('filtering', document.getElementById('au-filtering').value);
 
   try {
     const res = await fetch('/api/auphonic', {
@@ -79,7 +116,6 @@ async function pollStatus(jobId) {
 
       if (job.status === 'completed') {
         clearInterval(intv);
-        // Important: check if the resultUrl is relative or absolute
         downloadBtn.href = job.resultUrl;
         auResult.style.display = 'block';
         processBtn.disabled = false;

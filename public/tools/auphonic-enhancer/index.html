@@ -8,6 +8,69 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    .config-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .config-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .config-item.full-width {
+      grid-column: 1 / -1;
+    }
+    .config-label {
+      font-size: 0.75rem;
+      color: var(--accents-5);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .config-select, .config-range-wrap {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      background: var(--accents-1);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-family: inherit;
+    }
+    .config-range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.4rem 0.75rem;
+    }
+    .config-range-wrap input[type="range"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 0;
+    }
+    .config-range-wrap .range-val {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--fg);
+      min-width: 32px;
+      text-align: right;
+    }
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--fg);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    @media (max-width: 600px) {
+      .config-panel { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
   <nav>
@@ -36,6 +99,7 @@
       </div>
 
       <div id="auInfo" style="display: none; margin-top: 2rem;">
+        <!-- File info -->
         <div class="card" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
           <div style="flex: 1;">
             <p id="auFileName" style="font-weight: 600; font-size: 0.875rem; color: var(--fg);"></p>
@@ -44,16 +108,76 @@
           <button class="btn btn-ghost" id="resetBtn">✕</button>
         </div>
 
-        <div id="tone-section" style="margin-bottom: 1.5rem;">
-      <label style="font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 0.5rem;">Processing Tone:</label>
-      <select id="au-tone" style="width: 100%; padding: 0.6rem; background: var(--accents-1); border: 1px solid var(--border); color: var(--fg); border-radius: 8px;">
-        <option value="natural">Pro Natural (Balanced)</option>
-        <option value="hard" selected>Pro Hard Tone (Radio Style)</option>
-      </select>
-      <p style="font-size:0.75rem; color: var(--accents-4); margin-top: 8px;">Hard Tone adds more punch and speech isolation for high-impact content.</p>
-    </div>
+        <!-- Audio Configuration -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="section-title">⚙ Audio Configuration</div>
+          
+          <div class="config-panel">
+            <!-- Processing Preset -->
+            <div class="config-item">
+              <span class="config-label">Processing Preset</span>
+              <select id="au-tone" class="config-select">
+                <option value="natural">Natural (Balanced)</option>
+                <option value="medium">Medium (Podcast)</option>
+                <option value="hard" selected>Hard (Radio Style)</option>
+              </select>
+            </div>
 
-    <button class="btn btn-primary" id="au-process" disabled style="width: 100%; justify-content: center; background: #0070f3;">Start Auphonic Processing</button>
+            <!-- Loudness Target -->
+            <div class="config-item">
+              <span class="config-label">Loudness Target</span>
+              <select id="au-loudness" class="config-select">
+                <option value="-23">-23 LUFS (Broadcast)</option>
+                <option value="-16" selected>-16 LUFS (Streaming)</option>
+                <option value="-14">-14 LUFS (Loud/Social)</option>
+                <option value="-11">-11 LUFS (Maximum)</option>
+              </select>
+            </div>
+
+            <!-- Noise Reduction -->
+            <div class="config-item">
+              <span class="config-label">Noise Reduction</span>
+              <div class="config-range-wrap">
+                <input type="range" id="au-denoise" min="0" max="20" value="12" />
+                <span class="range-val" id="au-denoise-val">12</span>
+              </div>
+            </div>
+
+            <!-- Leveler Strength -->
+            <div class="config-item">
+              <span class="config-label">Leveler Strength</span>
+              <div class="config-range-wrap">
+                <input type="range" id="au-leveler" min="0" max="100" value="80" />
+                <span class="range-val" id="au-leveler-val">80%</span>
+              </div>
+            </div>
+
+            <!-- Denoise Method -->
+            <div class="config-item">
+              <span class="config-label">Denoise Method</span>
+              <select id="au-denoise-method" class="config-select">
+                <option value="speech_isolation" selected>Speech Isolation (AI)</option>
+                <option value="auto">Auto Detect</option>
+                <option value="dialog_isolation">Dialog Isolation</option>
+              </select>
+            </div>
+
+            <!-- Filtering -->
+            <div class="config-item">
+              <span class="config-label">High-Pass Filter</span>
+              <select id="au-filtering" class="config-select">
+                <option value="true" selected>Enabled (Recommended)</option>
+                <option value="false">Disabled</option>
+              </select>
+            </div>
+          </div>
+
+          <p style="font-size: 0.7rem; color: var(--accents-4); margin-top: 0.5rem;">
+            💡 Tip: Use "Hard" preset with -14 LUFS for punchy social media content. Use "Natural" with -16 LUFS for podcasts.
+          </p>
+        </div>
+
+        <button class="btn btn-primary" id="au-process" disabled style="width: 100%; justify-content: center; background: #0070f3;">Start Auphonic Processing</button>
       </div>
 
       <div id="auProgress" style="display: none; margin-top: 2rem;">
