@@ -406,6 +406,7 @@ function formatAssTime(seconds) {
 }
 
 const FormDataNode = require('form-data');
+const axios = require('axios');
 app.post('/api/auphonic', upload.single('media'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No media provided' });
   
@@ -414,7 +415,6 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
   res.json({ jobId });
 
   try {
-    // Read user configuration from form data
     const denoiseAmount = req.body.denoise || '12';
     const levelerStrength = req.body.leveler || '80';
     const loudnessTarget = req.body.loudness || '-16';
@@ -423,11 +423,9 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
 
     console.log('=== AUPHONIC CONFIG ===', { denoiseAmount, levelerStrength, loudnessTarget, denoiseMethod, filtering });
 
-    // Read file into buffer to ensure full upload (streams can fail with native fetch)
-    const fileBuffer = fs.readFileSync(req.file.path);
     const form = new FormDataNode();
     
-    // Put all config fields FIRST, file LAST (some APIs require this order)
+    // Config fields first
     form.append('action', 'start');
     form.append('denoise', 'true');
     form.append('denoisemethod', denoiseMethod);
@@ -440,49 +438,42 @@ app.post('/api/auphonic', upload.single('media'), async (req, res) => {
     const outputFormat = req.file.originalname.endsWith('.mp3') ? 'mp3' : 'mp4';
     form.append('output_files', JSON.stringify([{ format: outputFormat, bitrate: 192 }]));
 
-    // File goes LAST
-    form.append('input_file', fileBuffer, {
+    // File LAST — using stream (axios handles streams correctly)
+    form.append('input_file', fs.createReadStream(req.file.path), {
       filename: req.file.originalname,
       contentType: req.file.mimetype || (req.file.originalname.endsWith('.mp3') ? 'audio/mpeg' : 'video/mp4')
     });
 
-    const auphonicRes = await fetch('https://auphonic.com/api/simple/productions.json', {
-      method: 'POST',
-      headers: { 
+    // Use axios instead of fetch — native fetch drops form-data streams
+    const auphonicRes = await axios.post('https://auphonic.com/api/simple/productions.json', form, {
+      headers: {
         'Authorization': `Bearer ${AUPHONIC_KEY}`,
         ...form.getHeaders()
       },
-      body: form
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
     });
 
-    if (!auphonicRes.ok) {
-      const errTxt = await auphonicRes.text();
-      console.error(`Auphonic API failed (${auphonicRes.status}):`, errTxt);
-      throw new Error(`Auphonic API failed: ${errTxt}`);
-    }
-
-    const data = await auphonicRes.json();
+    const data = auphonicRes.data;
     console.log('=== AUPHONIC RESPONSE ===');
     console.log('Status:', data.data?.status, data.data?.status_string);
     console.log('Input file:', data.data?.input_file);
-    console.log('Length:', data.data?.length);
-    const uuid = data.data && data.data.uuid;
+    console.log('UUID:', data.data?.uuid);
     
+    const uuid = data.data && data.data.uuid;
     if (!uuid) throw new Error('No UUID returned from Auphonic');
 
     jobs[jobId].auphonicUuid = uuid;
     jobs[jobId].progress = 20;
     jobs[jobId].step = 'File uploaded — processing on Auphonic servers...';
     
-    // Cleanup local file AFTER successful upload
     fs.unlink(req.file.path, () => {});
-    
     pollAuphonicJob(jobId, uuid);
 
   } catch (err) {
-    console.error('Auphonic Error:', err);
+    console.error('Auphonic Error:', err.response?.data || err.message);
     jobs[jobId].status = 'error';
-    jobs[jobId].error = err.message;
+    jobs[jobId].error = err.response?.data?.error_message || err.message;
   }
 });
 
